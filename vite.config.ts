@@ -647,10 +647,11 @@ const config = defineConfig(({ mode, command }) => {
             /process\.env\.HERMES_API_URL/g,
             JSON.stringify(hermesApiUrl),
           )
-          result = result.replace(
-            /process\.env\.HERMES_API_TOKEN/g,
-            JSON.stringify(env.HERMES_API_TOKEN || ''),
-          )
+          if (/process\.env\.HERMES_API_TOKEN/.test(result)) {
+            this.error(
+              'Client code must not reference process.env.HERMES_API_TOKEN. Read the token on the server only.',
+            )
+          }
           result = result.replace(
             /process\.env\.NODE_ENV/g,
             JSON.stringify(mode),

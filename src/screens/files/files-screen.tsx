@@ -16,6 +16,7 @@ import {
   DialogRoot,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Markdown } from '@/components/prompt-kit/markdown'
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Types
@@ -143,86 +144,6 @@ function getParentPath(pathValue: string): string {
   const parts = pathValue.replace(/\\/g, '/').split('/').filter(Boolean)
   if (parts.length <= 1) return ''
   return parts.slice(0, -1).join('/')
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Simple markdown → HTML (no deps)
-// ──────────────────────────────────────────────────────────────────────────────
-
-function markdownToHtml(md: string): string {
-  let html = md
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-
-  // Fenced code blocks
-  html = html.replace(/```[\w]*\n([\s\S]*?)```/g, (_m, code: string) => {
-    return `<pre class="md-code-block"><code>${code}</code></pre>`
-  })
-
-  // Inline code
-  html = html.replace(/`([^`]+)`/g, '<code class="md-inline-code">$1</code>')
-
-  // Headers
-  html = html.replace(/^#{6}\s+(.+)$/gm, '<h6 class="md-h6">$1</h6>')
-  html = html.replace(/^#{5}\s+(.+)$/gm, '<h5 class="md-h5">$1</h5>')
-  html = html.replace(/^#{4}\s+(.+)$/gm, '<h4 class="md-h4">$1</h4>')
-  html = html.replace(/^#{3}\s+(.+)$/gm, '<h3 class="md-h3">$1</h3>')
-  html = html.replace(/^#{2}\s+(.+)$/gm, '<h2 class="md-h2">$1</h2>')
-  html = html.replace(/^#{1}\s+(.+)$/gm, '<h1 class="md-h1">$1</h1>')
-
-  // Bold / italic
-  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>')
-  html = html.replace(/__(.+?)__/g, '<strong>$1</strong>')
-  html = html.replace(/_(.+?)_/g, '<em>$1</em>')
-
-  // Strikethrough
-  html = html.replace(/~~(.+?)~~/g, '<del>$1</del>')
-
-  // Horizontal rules
-  html = html.replace(/^---+$/gm, '<hr class="md-hr" />')
-
-  // Blockquotes (re-escaped)
-  html = html.replace(
-    /^&gt;\s+(.+)$/gm,
-    '<blockquote class="md-blockquote">$1</blockquote>',
-  )
-
-  // Unordered lists
-  html = html.replace(/^[-*+]\s+(.+)$/gm, '<li class="md-li">$1</li>')
-  html = html.replace(
-    /(<li[^>]*>.*<\/li>\n?)+/g,
-    (m) => `<ul class="md-ul">${m}</ul>`,
-  )
-
-  // Links
-  html = html.replace(
-    /\[([^\]]+)\]\(([^)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noopener noreferrer" class="md-link">$1</a>',
-  )
-
-  // Paragraphs
-  const lines = html.split('\n')
-  const result: Array<string> = []
-  for (const line of lines) {
-    if (
-      line.trim() === '' ||
-      line.startsWith('<h') ||
-      line.startsWith('<ul') ||
-      line.startsWith('<ol') ||
-      line.startsWith('<li') ||
-      line.startsWith('<pre') ||
-      line.startsWith('<blockquote') ||
-      line.startsWith('<hr')
-    ) {
-      result.push(line)
-    } else {
-      result.push(`<p class="md-p">${line}</p>`)
-    }
-  }
-  return result.join('\n')
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -705,12 +626,6 @@ function FilePanel({ selectedEntry }: FilePanelProps) {
   const isCode = isCodeFile(fileName)
   const isEditable = isEditableFile(fileName)
 
-  // Always call useMemo unconditionally
-  const mdHtml = useMemo(
-    () => (isMd && !rawMode && content ? markdownToHtml(content) : ''),
-    [isMd, rawMode, content],
-  )
-
   const highlighted = useMemo(
     () => (isCode && !isMd && content ? highlightCode(content, ext) : ''),
     [isCode, isMd, content, ext],
@@ -945,11 +860,9 @@ function FilePanel({ selectedEntry }: FilePanelProps) {
           {header}
           <ScrollAreaRoot className="flex-1 min-h-0">
             <ScrollAreaViewport>
-              {/* eslint-disable-next-line react/no-danger */}
-              <div
-                className="markdown-preview px-6 py-5 text-sm text-primary-900 dark:text-neutral-200"
-                dangerouslySetInnerHTML={{ __html: mdHtml }}
-              />
+              <div className="markdown-preview px-6 py-5 text-sm text-primary-900 dark:text-neutral-200">
+                <Markdown className="gap-3">{content}</Markdown>
+              </div>
             </ScrollAreaViewport>
             <ScrollAreaScrollbar orientation="vertical">
               <ScrollAreaThumb />
@@ -975,7 +888,6 @@ function FilePanel({ selectedEntry }: FilePanelProps) {
             <ScrollAreaViewport>
               <pre
                 className="code-viewer px-4 py-4 text-xs font-mono leading-relaxed text-primary-800 dark:text-neutral-300"
-                // eslint-disable-next-line react/no-danger
                 dangerouslySetInnerHTML={{ __html: displayHtml }}
               />
             </ScrollAreaViewport>
