@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { usePageTitle } from '@/hooks/use-page-title'
 import {
@@ -263,49 +263,112 @@ const KEYWORDS = new Set([
   'delete',
 ])
 
-function highlightCode(code: string, ext: string): string {
-  if (ext === 'json') {
-    return code
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/("(?:[^"\\]|\\.)*")(\s*:)/g, '<span class="hl-key">$1</span>$2')
-      .replace(/:\s*("(?:[^"\\]|\\.)*")/g, ': <span class="hl-str">$1</span>')
-      .replace(/:\s*(-?\d+\.?\d*)/g, ': <span class="hl-num">$1</span>')
-      .replace(/:\s*(true|false|null)/g, ': <span class="hl-kw">$1</span>')
+type HighlightKind =
+  | 'plain'
+  | 'comment'
+  | 'jsonKey'
+  | 'keyword'
+  | 'number'
+  | 'string'
+  | 'type'
+
+type HighlightToken = {
+  text: string
+  kind: HighlightKind
+}
+
+const HIGHLIGHT_CLASS_BY_KIND: Record<Exclude<HighlightKind, 'plain'>, string> = {
+  comment: 'hl-comment',
+  jsonKey: 'hl-key',
+  keyword: 'hl-kw',
+  number: 'hl-num',
+  string: 'hl-str',
+  type: 'hl-type',
+}
+
+function pushHighlightToken(tokens: Array<HighlightToken>, text: string, kind: HighlightKind = 'plain') {
+  if (!text) return
+  tokens.push({ text, kind })
+}
+
+function tokenizeJson(code: string): Array<HighlightToken> {
+  const tokens: Array<HighlightToken> = []
+  const pattern = /("(?:[^"\\]|\\.)*")(\s*:)?|-?\d+\.?\d*|\b(?:true|false|null)\b/g
+  let lastIndex = 0
+
+  for (const match of code.matchAll(pattern)) {
+    const index = match.index ?? 0
+    pushHighlightToken(tokens, code.slice(lastIndex, index))
+
+    const [value, stringValue, colon] = match
+    if (stringValue) {
+      pushHighlightToken(tokens, stringValue, colon ? 'jsonKey' : 'string')
+      if (colon) pushHighlightToken(tokens, colon)
+    } else if (value === 'true' || value === 'false' || value === 'null') {
+      pushHighlightToken(tokens, value, 'keyword')
+    } else {
+      pushHighlightToken(tokens, value, 'number')
+    }
+
+    lastIndex = index + value.length
   }
 
-  const escaped = code
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
+  pushHighlightToken(tokens, code.slice(lastIndex))
+  return tokens
+}
 
-  // Strings (single + double + template)
-  let out = escaped.replace(
-    /(["'`])(?:(?!\1)[^\\]|\\.)*?\1/g,
-    '<span class="hl-str">$&</span>',
-  )
+function tokenizeCode(code: string): Array<HighlightToken> {
+  const tokens: Array<HighlightToken> = []
+  const pattern =
+    /\/\/[^\n]*|\/\*[\s\S]*?\*\/|(["'`])(?:(?!\1)[^\\]|\\.)*?\1|(?<![a-zA-Z_$])\b\d+\.?\d*\b|\b[a-zA-Z_$][a-zA-Z0-9_$]*\b/g
+  let lastIndex = 0
 
-  // Line comments
-  out = out.replace(/(\/\/[^\n]*)/g, '<span class="hl-comment">$1</span>')
+  for (const match of code.matchAll(pattern)) {
+    const index = match.index ?? 0
+    const value = match[0]
+    pushHighlightToken(tokens, code.slice(lastIndex, index))
 
-  // Block comments
-  out = out.replace(/(\/\*[\s\S]*?\*\/)/g, '<span class="hl-comment">$1</span>')
+    if (value.startsWith('//') || value.startsWith('/*')) {
+      pushHighlightToken(tokens, value, 'comment')
+    } else if (value.startsWith('"') || value.startsWith("'") || value.startsWith('`')) {
+      pushHighlightToken(tokens, value, 'string')
+    } else if (/^-?\d+\.?\d*$/.test(value)) {
+      pushHighlightToken(tokens, value, 'number')
+    } else if (KEYWORDS.has(value)) {
+      pushHighlightToken(tokens, value, 'keyword')
+    } else if (/^[A-Z]/.test(value)) {
+      pushHighlightToken(tokens, value, 'type')
+    } else {
+      pushHighlightToken(tokens, value)
+    }
 
-  // Keywords and type names
-  out = out.replace(/\b([a-zA-Z_$][a-zA-Z0-9_$]*)\b/g, (match) => {
-    if (KEYWORDS.has(match)) return `<span class="hl-kw">${match}</span>`
-    if (/^[A-Z]/.test(match)) return `<span class="hl-type">${match}</span>`
-    return match
+    lastIndex = index + value.length
+  }
+
+  pushHighlightToken(tokens, code.slice(lastIndex))
+  return tokens
+}
+
+function highlightCode(code: string, ext: string): Array<ReactNode> {
+  const tokens = ext === 'json' ? tokenizeJson(code) : tokenizeCode(code)
+  return tokens.map((token, index) => {
+    if (token.kind === 'plain') {
+      return <Fragment key={index}>{token.text}</Fragment>
+    }
+
+    return (
+      <span key={index} className={HIGHLIGHT_CLASS_BY_KIND[token.kind]}>
+        {token.text}
+      </span>
+    )
   })
+}
 
-  // Numbers
-  out = out.replace(
-    /(?<![a-zA-Z_$])\b(\d+\.?\d*)\b/g,
-    '<span class="hl-num">$1</span>',
-  )
-
-  return out
+function highlightCodeContent(code: string, ext: string): Array<ReactNode> {
+  if (ext === 'json') {
+    return highlightCode(code, 'json')
+  }
+  return highlightCode(code, ext)
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -626,8 +689,8 @@ function FilePanel({ selectedEntry }: FilePanelProps) {
   const isCode = isCodeFile(fileName)
   const isEditable = isEditableFile(fileName)
 
-  const highlighted = useMemo(
-    () => (isCode && !isMd && content ? highlightCode(content, ext) : ''),
+  const highlighted = useMemo<Array<ReactNode>>(
+    () => (isCode && !isMd && content ? highlightCodeContent(content, ext) : []),
     [isCode, isMd, content, ext],
   )
 
@@ -878,7 +941,7 @@ function FilePanel({ selectedEntry }: FilePanelProps) {
   // ── Code viewer (syntax highlighted) — also raw mode for md ───────────────
 
   if (isCode) {
-    const displayHtml = isMd ? highlightCode(content, 'md') : highlighted
+    const displayContent = isMd ? highlightCodeContent(content, 'md') : highlighted
     return (
       <>
         {diffModal}
@@ -886,10 +949,9 @@ function FilePanel({ selectedEntry }: FilePanelProps) {
           {header}
           <ScrollAreaRoot className="flex-1 min-h-0">
             <ScrollAreaViewport>
-              <pre
-                className="code-viewer px-4 py-4 text-xs font-mono leading-relaxed text-primary-800 dark:text-neutral-300"
-                dangerouslySetInnerHTML={{ __html: displayHtml }}
-              />
+              <pre className="code-viewer px-4 py-4 text-xs font-mono leading-relaxed text-primary-800 dark:text-neutral-300">
+                <code>{displayContent}</code>
+              </pre>
             </ScrollAreaViewport>
             <ScrollAreaScrollbar orientation="vertical">
               <ScrollAreaThumb />
