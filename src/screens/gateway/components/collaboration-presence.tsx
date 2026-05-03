@@ -82,6 +82,8 @@ export function CollaborationPresence() {
   const [usersById, setUsersById] = useState<Record<string, PresenceHeartbeat>>({})
 
   useEffect(() => {
+    const identity = identityRef.current
+
     const syncFromStorage = () => {
       const pruned = pruneStaleUsers(readStoredUsers(), Date.now())
       setUsersById(pruned)
@@ -152,7 +154,7 @@ export function CollaborationPresence() {
 
       const leaveMessage: PresenceLeave = {
         type: 'leave',
-        userId: identityRef.current.userId,
+        userId: identity.userId,
         timestamp: Date.now(),
       }
       channelRef.current?.postMessage(leaveMessage)
@@ -160,7 +162,7 @@ export function CollaborationPresence() {
       channelRef.current = null
 
       const stored = readStoredUsers()
-      delete stored[identityRef.current.userId]
+      delete stored[identity.userId]
       persistUsers(pruneStaleUsers(stored, Date.now()))
     }
   }, [])

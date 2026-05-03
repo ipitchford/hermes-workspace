@@ -18,9 +18,8 @@ export type ToolIndicatorProps = {
 }
 
 function ToolIndicator({ tools, defaultOpen = false }: ToolIndicatorProps) {
-  if (tools.length === 0) return null
-
   const [isOpen, setIsOpen] = useState(defaultOpen)
+  const toolCount = tools.length
 
   useLayoutEffect(() => {
     if (defaultOpen) {
@@ -28,7 +27,8 @@ function ToolIndicator({ tools, defaultOpen = false }: ToolIndicatorProps) {
     }
   }, [defaultOpen])
 
-  const toolCount = tools.length
+  if (toolCount === 0) return null
+
   const toolLabel = toolCount === 1 ? '1 tool used' : `${toolCount} tools used`
 
   return (

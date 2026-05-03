@@ -612,7 +612,7 @@ export function AgentViewPanel() {
   } | null>(null)
   const [cliAgentsExpanded, setCliAgentsExpanded] = useState(true)
   const cliAgentsQuery = useCliAgents()
-  const cliAgents = cliAgentsQuery.data ?? []
+  const cliAgents = useMemo(() => cliAgentsQuery.data ?? [], [cliAgentsQuery.data])
   // Auto: expanded avatar when idle, compact when agents are working
   const viewMode = 'expanded'
 

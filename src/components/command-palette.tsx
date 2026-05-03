@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
@@ -117,7 +117,7 @@ export function CommandPalette({ pathname, sessions }: CommandPaletteProps) {
     return navigator.platform.toLowerCase().includes('mac')
   }, [])
 
-  const runSlashCommand = (command: string) => {
+  const runSlashCommand = useCallback((command: string) => {
     if (command === '/new') {
       void navigate({ to: '/chat' })
       return
@@ -155,7 +155,7 @@ export function CommandPalette({ pathname, sessions }: CommandPaletteProps) {
 
     window.sessionStorage.setItem(CHAT_PENDING_COMMAND_STORAGE_KEY, command)
     void navigate({ to: '/chat' })
-  }
+  }, [navigate, pathname])
 
   const screenActions = useMemo<Array<CommandAction>>(
     () => [
@@ -295,7 +295,7 @@ export function CommandPalette({ pathname, sessions }: CommandPaletteProps) {
         onSelect: () => runSlashCommand('/save'),
       },
     ],
-    [pathname],
+    [runSlashCommand],
   )
 
   const actions = useMemo(

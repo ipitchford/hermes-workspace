@@ -636,7 +636,7 @@ export function ChatScreen({
       // External message arrived (e.g. from Telegram) — show thinking indicator
       setWaitingForResponse(true)
       setPendingGeneration(true)
-    }, []),
+    }, [setWaitingForResponse]),
     onApprovalRequest: useCallback((payload: Record<string, unknown>) => {
       const approvalId =
         typeof payload.id === 'string'
@@ -821,7 +821,7 @@ export function ChatScreen({
     }
     setPendingGeneration(false)
     setWaitingForResponse(false)
-  }, [streamStop])
+  }, [streamStop, setWaitingForResponse])
 
   const streamStart = useCallback(() => {
     if (!activeFriendlyId || isNewChat) return
@@ -1121,7 +1121,7 @@ export function ChatScreen({
         setPendingGeneration(false)
         setWaitingForResponse(false)
       },
-      [navigate, queryClient],
+      [embedded, navigate, queryClient, setWaitingForResponse],
     ),
     onMessageAccepted: useCallback(
       (_sessionKey: string, friendlyId: string, clientId: string) => {
@@ -1317,9 +1317,9 @@ export function ChatScreen({
   }, [
     activeToolCalls,
     activeIsRealtimeStreaming,
-    activeRealtimeStreamingText,
     realtimeMessages,
     realtimeStreamingThinking,
+    stableActiveStreamingText,
   ])
 
   const derivedStreamingInfo = useMemo(() => {
@@ -1485,20 +1485,23 @@ export function ChatScreen({
     refetchInterval: 60_000, // Re-check every 60s to clear stale errors
   })
   // Don't show errors for new chats or when SSE is connected
-  const statusError =
-    !isNewChat && connectionState !== 'connected'
-      ? statusQuery.error instanceof Error
-        ? {
-            message: statusQuery.error.message,
-            status: (statusQuery.error as Error & { status?: number }).status,
-          }
-        : statusQuery.data && !statusQuery.data.ok
+  const statusError = useMemo(
+    () =>
+      !isNewChat && connectionState !== 'connected'
+        ? statusQuery.error instanceof Error
           ? {
-              message: statusQuery.data.error || 'Hermes unavailable',
-              status: statusQuery.data.status,
+              message: statusQuery.error.message,
+              status: (statusQuery.error as Error & { status?: number }).status,
             }
-          : null
-      : null
+          : statusQuery.data && !statusQuery.data.ok
+            ? {
+                message: statusQuery.data.error || 'Hermes unavailable',
+                status: statusQuery.data.status,
+              }
+            : null
+        : null,
+    [connectionState, isNewChat, statusQuery.data, statusQuery.error],
+  )
   const serverError = statusError?.message ?? sessionsError ?? historyError
   const serverErrorStatus = statusError?.status
   const showErrorNotice = Boolean(serverError) && !isNewChat
@@ -1626,6 +1629,7 @@ export function ChatScreen({
     if (message) setError(message)
   }, [
     activeExists,
+    embedded,
     error,
     statusError,
     historyError,
@@ -1736,7 +1740,7 @@ export function ChatScreen({
     streamStop()
     lastAssistantSignature.current = ''
     setWaitingForResponse(false)
-  }, [activeFriendlyId, isNewChat, streamStop])
+  }, [activeFriendlyId, isNewChat, streamStop, setWaitingForResponse])
 
   /**
    * Simplified sendMessage - fire and forget.
@@ -1895,6 +1899,7 @@ export function ChatScreen({
       streamFinish,
       streamStart,
       currentModel,
+      setWaitingForResponse,
     ],
   )
 
@@ -1957,6 +1962,7 @@ export function ChatScreen({
     queryClient,
     resolvedSessionKey,
     sendMessage,
+    setWaitingForResponse,
   ])
 
   const retryQueuedMessage = useCallback(
@@ -2046,13 +2052,6 @@ export function ChatScreen({
   )
 
   useEffect(() => {
-    if (false) {
-      // Server connection checks removed — Hermes uses direct API
-      hasSeenDisconnectRef.current = true
-      retriedQueuedMessageKeysRef.current.clear()
-      return
-    }
-
     if (connectionState === 'connected' && hasSeenDisconnectRef.current) {
       hasSeenDisconnectRef.current = false
       flushRetryableMessages()
@@ -2277,7 +2276,7 @@ export function ChatScreen({
       const attachmentPayload: Array<ChatAttachment> = attachments.map(
         (attachment) => ({
           ...attachment,
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime safety
+           
           id: attachment.id ?? crypto.randomUUID(),
         }),
       )
@@ -2344,16 +2343,19 @@ export function ChatScreen({
       activeFriendlyId,
       activeSessionKey,
       createSessionForMessage,
+      embedded,
       forcedSessionKey,
+      isMobile,
       isNewChat,
+      isPortableMode,
       navigate,
-      onSessionResolved,
       scrollChatToBottom,
       sendMessage,
       upsertSessionInCache,
       queryClient,
       resolvedSessionKey,
       handleUiSlashCommand,
+      setWaitingForResponse,
     ],
   )
 
@@ -2374,7 +2376,7 @@ export function ChatScreen({
     setSending(false)
     setPendingGeneration(false)
     setWaitingForResponse(false)
-  }, [cancelStreaming, queryClient])
+  }, [cancelStreaming, queryClient, setWaitingForResponse])
 
   const runPaletteSlashCommand = useCallback(
     (command: string) => {
@@ -2383,7 +2385,7 @@ export function ChatScreen({
       if (handleUiSlashCommand(trimmedCommand)) return
       send(trimmedCommand, [], false, commandHelpers)
     },
-    [commandHelpers, handleUiSlashCommand, send],
+    [handleUiSlashCommand, send],
   )
 
   useEffect(() => {
@@ -2452,7 +2454,7 @@ export function ChatScreen({
   }, [])
 
   const historyLoading =
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime safety
+     
     (historyQuery.isLoading && !historyQuery.data) || isRedirecting
   const historyEmpty = !historyLoading && finalDisplayMessages.length === 0
   const errorNotice = useMemo(() => {
@@ -2719,7 +2721,7 @@ export function ChatScreen({
               }
               wrapperRef={composerRef}
               composerRef={composerHandleRef}
-              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime safety
+               
               focusKey={`${isNewChat ? 'new' : activeFriendlyId}:${activeCanonicalKey ?? ''}`}
               thinkingLevel={thinkingLevel}
               onThinkingLevelChange={handleThinkingLevelChange}

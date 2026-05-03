@@ -22,15 +22,16 @@ function ThinkingIndicator({
   defaultOpen = false,
   isStreaming = false,
 }: ThinkingIndicatorProps) {
-  if (!content || content.trim().length === 0) return null
-
   const [isOpen, setIsOpen] = useState(() => isStreaming || defaultOpen)
+  const hasContent = content.trim().length > 0
 
   useLayoutEffect(() => {
     if (isStreaming || defaultOpen) {
       setIsOpen(true)
     }
   }, [defaultOpen, isStreaming])
+
+  if (!hasContent) return null
 
   return (
     <div className="inline-flex flex-col">

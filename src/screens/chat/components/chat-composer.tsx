@@ -1403,6 +1403,7 @@ function ChatComposerComponent({
     reset,
     setComposerAttachments,
     setComposerValue,
+    thinkingLevel,
     value,
     fastMode,
   ])
@@ -1755,7 +1756,7 @@ function ChatComposerComponent({
       WebkitTransform: tf,
       '--mobile-tab-bar-offset': MOBILE_TAB_BAR_OFFSET,
     } as CSSProperties
-  }, [isMobileViewport, keyboardOrFocusActive, effectiveScrollHidden])
+  }, [isMobileViewport, keyboardOrFocusActive, effectiveScrollHidden, chatNavMode])
 
   return (
     <div

@@ -107,7 +107,7 @@ export function AgentHubLayout({ agents }: AgentHubLayoutProps) {
     refetchInterval: 10_000,
   })
 
-  const sessions = sessionsQuery.data ?? []
+  const sessions = useMemo(() => sessionsQuery.data ?? [], [sessionsQuery.data])
   const agentRows = useMemo(() => deriveAgentRows(agents, sessions), [agents, sessions])
   // Always show the office as "alive" — agents idle but present
   const hasActive = true

@@ -981,7 +981,7 @@ export function Conductor() {
       })),
     [selectedHistoryEntry],
   )
-  const OFFICE_NAMES = ['Nova', 'Pixel', 'Blaze', 'Echo', 'Sage', 'Drift']
+  const OFFICE_NAMES = useMemo(() => ['Nova', 'Pixel', 'Blaze', 'Echo', 'Sage', 'Drift'], [])
   const homeOfficeRows = useMemo<AgentWorkingRow[]>(() => {
     const sessions = conductor.recentSessions
     if (sessions.length === 0) {
@@ -1014,7 +1014,7 @@ export function Conductor() {
         sessionKey: s.key ?? undefined,
       }
     })
-  }, [conductor.recentSessions])
+  }, [OFFICE_NAMES, conductor.recentSessions])
 
   const officeAgentRows = useMemo<AgentWorkingRow[]>(() => {
     if (conductor.workers.length > 0) {
@@ -1143,7 +1143,18 @@ export function Conductor() {
       lines.push(`**Output:** ${completePhaseOutputLabel}`)
     }
     return lines.join('\n')
-  }, [phase, completePhaseProjectPath, completePhaseOutputLabel, totalWorkers, conductor.goal, totalTokens, conductor.missionStartedAt, now])
+  }, [
+    phase,
+    completePhaseProjectPath,
+    completePhaseOutputLabel,
+    totalWorkers,
+    conductor.goal,
+    conductor.completedAt,
+    conductor.streamError,
+    totalTokens,
+    conductor.missionStartedAt,
+    now,
+  ])
   const continuationPreview = useMemo(() => {
     const summarySource =
       completeSummary ??

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { emitFeedEvent } from './feed-event-bus'
+
 export type TaskPriority = 'urgent' | 'high' | 'normal' | 'low'
 export type TaskStatus = 'inbox' | 'assigned' | 'in_progress' | 'review' | 'done'
 export type HubTask = {

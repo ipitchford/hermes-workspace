@@ -134,7 +134,10 @@ export function ProfilesScreen() {
     enabled: Boolean(detailsName),
   })
 
-  const profiles = profilesQuery.data?.profiles ?? []
+  const profiles = useMemo(
+    () => profilesQuery.data?.profiles ?? [],
+    [profilesQuery.data?.profiles],
+  )
   const activeProfile = profilesQuery.data?.activeProfile ?? 'default'
 
   const sorted = useMemo(() => profiles, [profiles])

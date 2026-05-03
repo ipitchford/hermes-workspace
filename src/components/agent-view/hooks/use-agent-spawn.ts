@@ -78,13 +78,14 @@ export function useAgentSpawn(
   )
 
   useEffect(function clearAllSpawnTimersOnUnmount() {
+    const timeoutByAgentId = timeoutByAgentIdRef.current
     return function cleanup() {
-      timeoutByAgentIdRef.current.forEach(function clearTimer(timeoutIds) {
+      timeoutByAgentId.forEach(function clearTimer(timeoutIds) {
         timeoutIds.forEach(function clearTimeoutById(timeoutId) {
           window.clearTimeout(timeoutId)
         })
       })
-      timeoutByAgentIdRef.current.clear()
+      timeoutByAgentId.clear()
     }
   }, [])
 

@@ -142,6 +142,7 @@ function extractContent(msg: { content?: string | Array<{ type?: string; text?: 
 function sanitizeArgsPreview(args?: string): string {
   if (!args) return 'No arguments'
   const cleaned = args
+    // eslint-disable-next-line no-control-regex -- command previews must strip control bytes.
     .replace(/[\u0000-\u001F\u007F]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
@@ -354,7 +355,7 @@ export function RunConsole({
       }
     }
     return Array.from(grouped.entries()).map(([agentName, events]) => ({ agentName, events }))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [displayEvents])
 
   const copyArtifactContent = useCallback(async (artifact: RunArtifact) => {

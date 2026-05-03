@@ -122,7 +122,7 @@ export function MemoryBrowserScreen() {
     queryFn: () => readJson<ListResponse>('/api/memory/list'),
   })
 
-  const files = filesQuery.data?.files ?? []
+  const files = useMemo(() => filesQuery.data?.files ?? [], [filesQuery.data?.files])
   const { rootMemory, memoryFiles } = useMemo(() => splitFiles(files), [files])
 
   useEffect(() => {

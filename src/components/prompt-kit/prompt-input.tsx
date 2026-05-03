@@ -228,7 +228,7 @@ function PromptInputTextarea({
     } else {
       el.style.height = `min(${el.scrollHeight}px, ${maxHeight})`
     }
-  }, [value, maxHeight, disableAutosize])
+  }, [value, maxHeight, disableAutosize, textareaRef])
 
   function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     adjustHeight(e.target)

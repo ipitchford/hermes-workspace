@@ -562,15 +562,15 @@ function ChatSidebarComponent({
   const isTasksActive = pathname === '/tasks'
   const isConductorActive = pathname === '/conductor'
   const isOperationsActive = pathname === '/operations'
-  const mainRoutes = ['/chat', '/new', '/files', '/terminal']
-  const knowledgeRoutes = ['/memory', '/skills']
-  const systemRoutes = ['/settings', '/logs']
+  const mainRoutes = useMemo(() => ['/chat', '/new', '/files', '/terminal'], [])
+  const knowledgeRoutes = useMemo(() => ['/memory', '/skills'], [])
+  const systemRoutes = useMemo(() => ['/settings', '/logs'], [])
 
   useEffect(() => {
     if (mainRoutes.includes(pathname)) setLastRoute('main', pathname)
     if (knowledgeRoutes.includes(pathname)) setLastRoute('knowledge', pathname)
     if (systemRoutes.includes(pathname)) setLastRoute('system', pathname)
-  }, [pathname])
+  }, [knowledgeRoutes, mainRoutes, pathname, systemRoutes])
 
   const mainNav = getLastRoute('main') || '/chat'
   const knowledgeNav = getLastRoute('knowledge') || '/memory'

@@ -308,7 +308,7 @@ function HermesContent() {
         setConfiguredKeys(keys)
       })
       .catch(() => {})
-  }, [])
+  }, [fetchModelsForProvider])
 
   const save = async (updates: {
     config?: Record<string, unknown>
@@ -681,7 +681,7 @@ function HermesContent() {
   )
 }
 
-function _ProfileContent() {
+function ProfileContent() {
   const { settings: cs, updateSettings: updateCS } = useChatSettingsStore()
   const [profileError, setProfileError] = useState<string | null>(null)
   const [processing, setProcessing] = useState(false)
@@ -1120,7 +1120,7 @@ function EnterpriseThemePicker() {
   )
 }
 
-function _LoaderContent() {
+function LoaderContent() {
   const { settings: cs, updateSettings: updateCS } = useChatSettingsStore()
   const styles: Array<{ value: LoaderStyle; label: string }> = [
     { value: 'dots', label: 'Dots' },
@@ -1267,7 +1267,7 @@ function NotificationsContent() {
   )
 }
 
-function _AdvancedContent() {
+function AdvancedContent() {
   const { settings, updateSettings } = useSettings()
   const [connectionStatus, setConnectionStatus] = useState<
     'idle' | 'testing' | 'connected' | 'failed'

@@ -928,7 +928,7 @@ function ChatMessageListComponent({
         clearTimeout(thinkingGraceTimerRef.current)
       }
     }
-  }, [displayEntries, waitingForResponse]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [displayEntries, waitingForResponse])  
 
   const normalizedMessageSearch = useMemo(
     function getNormalizedMessageSearch() {

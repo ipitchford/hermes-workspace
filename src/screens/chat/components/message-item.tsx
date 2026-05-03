@@ -1827,7 +1827,10 @@ function MessageItemComponent({
     isUser && (hasText || hasAttachments || hasInlineImages)
 
   // Get tool calls from this message (for assistant messages)
-  const toolCalls = role === 'assistant' ? getToolCallsFromMessage(message) : []
+  const toolCalls = useMemo(
+    () => (role === 'assistant' ? getToolCallsFromMessage(message) : []),
+    [message, role],
+  )
   const embeddedStreamToolCalls = useMemo(() => {
     const value = (message as any).__streamToolCalls
     if (!Array.isArray(value)) return []

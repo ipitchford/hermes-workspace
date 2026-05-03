@@ -700,7 +700,10 @@ export function DashboardScreen() {
     enabled: sessionsAvailable,
   })
 
-  const sessions = (sessionsQuery.data ?? []) as HermesSession[]
+  const sessions = useMemo(
+    () => (sessionsQuery.data ?? []) as Array<HermesSession>,
+    [sessionsQuery.data],
+  )
 
   const stats = useMemo(() => {
     let totalMessages = 0,

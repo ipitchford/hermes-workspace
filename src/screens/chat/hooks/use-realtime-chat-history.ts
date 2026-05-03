@@ -455,6 +455,7 @@ export function useRealtimeChatHistory({
     effectiveSessionKey,
     historyMessages.length,
     mergedMessages.length,
+    portableMode,
     realtimeMessages.length,
   ])
 

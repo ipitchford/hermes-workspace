@@ -784,7 +784,7 @@ export function useStreamingMessage(options: UseStreamingMessageOptions = {}) {
         const decoder = new TextDecoder()
         let buffer = ''
 
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime safety
+         
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
@@ -836,6 +836,7 @@ export function useStreamingMessage(options: UseStreamingMessageOptions = {}) {
       onMessageAccepted,
       onSessionResolved,
       processEvent,
+      processStoreEvent,
       resetActiveStreamState,
       schedulePostAcceptanceTimeout,
     ],

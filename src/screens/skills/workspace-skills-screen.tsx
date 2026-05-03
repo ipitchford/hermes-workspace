@@ -157,7 +157,10 @@ export function WorkspaceSkillsScreen() {
     },
   })
 
-  const visibleSkills = skillsQuery.data?.skills ?? []
+  const visibleSkills = useMemo(
+    () => skillsQuery.data?.skills ?? [],
+    [skillsQuery.data?.skills],
+  )
   const skillContentQuery = useQuery({
     queryKey: ['workspace', 'skills', selectedSkillId, 'content'],
     enabled: selectedSkillId.length > 0,

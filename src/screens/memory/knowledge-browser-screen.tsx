@@ -307,7 +307,7 @@ export function KnowledgeBrowserScreen() {
     queryFn: () => readJson<KnowledgeListResponse>('/api/knowledge/list'),
   })
 
-  const pages = listQuery.data?.pages ?? []
+  const pages = useMemo(() => listQuery.data?.pages ?? [], [listQuery.data?.pages])
   const knowledgeRoot = listQuery.data?.knowledgeRoot ?? '~/.hermes/knowledge/'
   const knowledgeExists = listQuery.data?.exists ?? false
 

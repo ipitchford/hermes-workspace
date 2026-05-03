@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type {
@@ -671,7 +671,7 @@ export function useAgentView(): AgentViewResult {
     [activeAgents, activeMission, missionSessionKeys],
   )
 
-  function killAgent(agentId: string) {
+  const killAgent = useCallback(function killAgent(agentId: string) {
     setActiveAgents((previous) => {
       const killedAgent = previous.find((agent) => agent.id === agentId)
       if (!killedAgent) return previous
@@ -694,11 +694,11 @@ export function useAgentView(): AgentViewResult {
       setHistoryAgents((current) => [historyEntry, ...current].slice(0, 10))
       return previous.filter((agent) => agent.id !== agentId)
     })
-  }
+  }, [])
 
-  function cancelQueueTask(taskId: string) {
+  const cancelQueueTask = useCallback(function cancelQueueTask(taskId: string) {
     setQueuedAgents((previous) => previous.filter((task) => task.id !== taskId))
-  }
+  }, [])
 
   return useMemo(
     () => ({

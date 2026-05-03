@@ -533,6 +533,8 @@ export function useOperations() {
   })
 
   const agents = useMemo(() => {
+    void metaVersion
+
     const parsed = configQuery.data?.parsed
     const allAgents = normalizeAgentList(parsed?.agents?.list)
     // Filter out system/internal agents — only show operations agents

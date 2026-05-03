@@ -33,7 +33,6 @@ export function ContextMeter({
 }: ContextMeterProps) {
   const [pct, setPct] = useState(0)
   const [warning, setWarning] = useState<string | null>(null)
-  const rafRef = useRef<number | null>(null)
   const prevPctRef = useRef(0)
 
   useEffect(() => {
@@ -69,7 +68,6 @@ export function ContextMeter({
     return () => {
       cancelled = true
       window.clearInterval(id)
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
     }
   }, [])
 

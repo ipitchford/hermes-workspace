@@ -65,6 +65,7 @@ export function PresenceIndicator({ currentTab }: { currentTab: string }) {
   useEffect(() => {
     // BroadcastChannel for cross-tab communication
     try {
+      const userId = myId.current
       const channel = new BroadcastChannel('clawsuite-presence')
       channelRef.current = channel
 
@@ -96,7 +97,7 @@ export function PresenceIndicator({ currentTab }: { currentTab: string }) {
       }, 10000)
 
       return () => {
-        channel.postMessage({ type: 'leave', userId: myId.current })
+        channel.postMessage({ type: 'leave', userId })
         channel.close()
         if (heartbeatRef.current) clearInterval(heartbeatRef.current)
         clearInterval(cleanupInterval)

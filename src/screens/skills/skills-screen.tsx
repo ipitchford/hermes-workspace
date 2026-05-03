@@ -819,10 +819,10 @@ function SecurityBadge({
   security?: SecurityRisk
   compact?: boolean
 }) {
+  const [expanded, setExpanded] = useState(false)
+
   if (!security) return null
   const config = SECURITY_BADGE[security.level]
-
-  const [expanded, setExpanded] = useState(false)
 
   // Compact badge for card grid
   if (compact) {

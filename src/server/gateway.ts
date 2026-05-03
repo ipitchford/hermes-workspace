@@ -765,9 +765,9 @@ function rawDataToString(data: RawData): string {
 const GW_KEY = '__clawsuite_gateway_client__' as const
 const ACTIVE_SEND_RUNS_KEY = '__clawsuite_active_send_stream_runs__' as const
 declare global {
-  // eslint-disable-next-line no-var
+   
   var __clawsuite_gateway_client__: GatewayClient | undefined
-  // eslint-disable-next-line no-var
+   
   var __clawsuite_active_send_stream_runs__: Set<string> | undefined
 }
 const existingClient = (globalThis as any)[GW_KEY] as GatewayClient | undefined

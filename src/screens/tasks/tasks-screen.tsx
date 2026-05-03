@@ -71,7 +71,10 @@ export function TasksScreen() {
     staleTime: 5 * 60_000, // profiles don't change often
   })
 
-  const assignees: Array<TaskAssignee> = assigneesQuery.data?.assignees ?? []
+  const assignees: Array<TaskAssignee> = useMemo(
+    () => assigneesQuery.data?.assignees ?? [],
+    [assigneesQuery.data?.assignees],
+  )
   const humanReviewer = assigneesQuery.data?.humanReviewer ?? null
 
   // Build a label map from dynamic assignees for TaskCard display
@@ -81,7 +84,7 @@ export function TasksScreen() {
     return map
   }, [assignees])
 
-  const tasks = tasksQuery.data ?? []
+  const tasks = useMemo(() => tasksQuery.data ?? [], [tasksQuery.data])
 
   const tasksByColumn = useMemo(() => {
     const map: Record<TaskColumn, Array<HermesTask>> = {

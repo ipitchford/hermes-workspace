@@ -7,6 +7,7 @@ import {
   type TeamMember,
   type TeamTemplateId,
 } from './team-panel'
+
 export { ROUGH_COST_PER_1K_TOKENS_USD } from '@/lib/config/costs'
 
 export type AgentHubLayoutProps = {

@@ -54,7 +54,12 @@ export function useModes() {
           mode.preferredPremiumModel !== (settings.preferredPremiumModel ?? ''))
       )
     },
-    [settings],
+    [
+      settings.onlySuggestCheaper,
+      settings.preferredBudgetModel,
+      settings.preferredPremiumModel,
+      settings.smartSuggestionsEnabled,
+    ],
   )
 
   // Clear applied mode if settings drift
@@ -136,7 +141,7 @@ export function useModes() {
       // Mark as applied
       setAppliedModeId(mode.id)
     },
-    [settings],
+    [updateSettings],
   )
 
   const getAppliedMode = useCallback((): Mode | null => {

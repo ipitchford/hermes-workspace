@@ -668,7 +668,7 @@ function SettingsRoute() {
 const PROFILE_IMAGE_MAX_DIMENSION = 128
 const PROFILE_IMAGE_MAX_FILE_SIZE = 10 * 1024 * 1024
 
-function _ProfileSection() {
+function ProfileSection() {
   const { settings: chatSettings, updateSettings: updateChatSettings } =
     useChatSettingsStore()
   const [profileError, setProfileError] = useState<string | null>(null)
@@ -895,7 +895,7 @@ function LoaderPreview({ style }: { style: LoaderStyle }) {
   )
 }
 
-function _LoaderStyleSection() {
+function LoaderStyleSection() {
   const { settings: chatSettings, updateSettings: updateChatSettings } =
     useChatSettingsStore()
 

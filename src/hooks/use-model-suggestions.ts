@@ -175,7 +175,7 @@ export function useModelSuggestions(_opts: {
 
 // -ignore -- disabled, will re-enable after fixing deps
 
-function _useModelSuggestionsDisabled({
+function useModelSuggestionsDisabled({
   currentModel,
   sessionKey,
   messages,

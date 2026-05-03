@@ -1010,7 +1010,7 @@ export function useConductorGateway() {
       phase === 'decomposing' || phase === 'running' ? 3_000 : false,
   })
 
-  const workers = sessionsQuery.data ?? []
+  const workers = useMemo(() => sessionsQuery.data ?? [], [sessionsQuery.data])
   const activeWorkers = useMemo(
     () =>
       workers.filter(
@@ -1102,7 +1102,7 @@ export function useConductorGateway() {
       lastActivityAtRef.current = Date.now()
       setTimeoutWarning(false)
     }
-  }, [phase, workers])
+  }, [phase, workers, workerOutputs])
 
   useEffect(() => {
     if (phase !== 'running' && phase !== 'decomposing') return
@@ -1213,7 +1213,7 @@ export function useConductorGateway() {
       cancelled = true
       window.clearInterval(timer)
     }
-  }, [phase, workers])
+  }, [phase, workers, workerOutputs])
 
   useEffect(() => {
     if (!planText) return
