@@ -60,6 +60,7 @@ import { Route as ApiContextUsageRouteImport } from './routes/api/context-usage'
 import { Route as ApiConnectionStatusRouteImport } from './routes/api/connection-status'
 import { Route as ApiConductorStopRouteImport } from './routes/api/conductor-stop'
 import { Route as ApiConductorSpawnRouteImport } from './routes/api/conductor-spawn'
+import { Route as ApiConductorOutputRouteImport } from './routes/api/conductor-output'
 import { Route as ApiChatEventsRouteImport } from './routes/api/chat-events'
 import { Route as ApiAuthCheckRouteImport } from './routes/api/auth-check'
 import { Route as ApiAuthRouteImport } from './routes/api/auth'
@@ -351,6 +352,11 @@ const ApiConductorSpawnRoute = ApiConductorSpawnRouteImport.update({
   path: '/api/conductor-spawn',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiConductorOutputRoute = ApiConductorOutputRouteImport.update({
+  id: '/api/conductor-output',
+  path: '/api/conductor-output',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiChatEventsRoute = ApiChatEventsRouteImport.update({
   id: '/api/chat-events',
   path: '/api/chat-events',
@@ -546,6 +552,7 @@ export interface FileRoutesByFullPath {
   '/api/auth': typeof ApiAuthRoute
   '/api/auth-check': typeof ApiAuthCheckRoute
   '/api/chat-events': typeof ApiChatEventsRoute
+  '/api/conductor-output': typeof ApiConductorOutputRoute
   '/api/conductor-spawn': typeof ApiConductorSpawnRoute
   '/api/conductor-stop': typeof ApiConductorStopRoute
   '/api/connection-status': typeof ApiConnectionStatusRoute
@@ -633,6 +640,7 @@ export interface FileRoutesByTo {
   '/api/auth': typeof ApiAuthRoute
   '/api/auth-check': typeof ApiAuthCheckRoute
   '/api/chat-events': typeof ApiChatEventsRoute
+  '/api/conductor-output': typeof ApiConductorOutputRoute
   '/api/conductor-spawn': typeof ApiConductorSpawnRoute
   '/api/conductor-stop': typeof ApiConductorStopRoute
   '/api/connection-status': typeof ApiConnectionStatusRoute
@@ -722,6 +730,7 @@ export interface FileRoutesById {
   '/api/auth': typeof ApiAuthRoute
   '/api/auth-check': typeof ApiAuthCheckRoute
   '/api/chat-events': typeof ApiChatEventsRoute
+  '/api/conductor-output': typeof ApiConductorOutputRoute
   '/api/conductor-spawn': typeof ApiConductorSpawnRoute
   '/api/conductor-stop': typeof ApiConductorStopRoute
   '/api/connection-status': typeof ApiConnectionStatusRoute
@@ -812,6 +821,7 @@ export interface FileRouteTypes {
     | '/api/auth'
     | '/api/auth-check'
     | '/api/chat-events'
+    | '/api/conductor-output'
     | '/api/conductor-spawn'
     | '/api/conductor-stop'
     | '/api/connection-status'
@@ -899,6 +909,7 @@ export interface FileRouteTypes {
     | '/api/auth'
     | '/api/auth-check'
     | '/api/chat-events'
+    | '/api/conductor-output'
     | '/api/conductor-spawn'
     | '/api/conductor-stop'
     | '/api/connection-status'
@@ -987,6 +998,7 @@ export interface FileRouteTypes {
     | '/api/auth'
     | '/api/auth-check'
     | '/api/chat-events'
+    | '/api/conductor-output'
     | '/api/conductor-spawn'
     | '/api/conductor-stop'
     | '/api/connection-status'
@@ -1076,6 +1088,7 @@ export interface RootRouteChildren {
   ApiAuthRoute: typeof ApiAuthRoute
   ApiAuthCheckRoute: typeof ApiAuthCheckRoute
   ApiChatEventsRoute: typeof ApiChatEventsRoute
+  ApiConductorOutputRoute: typeof ApiConductorOutputRoute
   ApiConductorSpawnRoute: typeof ApiConductorSpawnRoute
   ApiConductorStopRoute: typeof ApiConductorStopRoute
   ApiConnectionStatusRoute: typeof ApiConnectionStatusRoute
@@ -1491,6 +1504,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiConductorSpawnRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/conductor-output': {
+      id: '/api/conductor-output'
+      path: '/api/conductor-output'
+      fullPath: '/api/conductor-output'
+      preLoaderRoute: typeof ApiConductorOutputRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/chat-events': {
       id: '/api/chat-events'
       path: '/api/chat-events'
@@ -1848,6 +1868,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthRoute: ApiAuthRoute,
   ApiAuthCheckRoute: ApiAuthCheckRoute,
   ApiChatEventsRoute: ApiChatEventsRoute,
+  ApiConductorOutputRoute: ApiConductorOutputRoute,
   ApiConductorSpawnRoute: ApiConductorSpawnRoute,
   ApiConductorStopRoute: ApiConductorStopRoute,
   ApiConnectionStatusRoute: ApiConnectionStatusRoute,

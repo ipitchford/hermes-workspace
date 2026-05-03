@@ -1,5 +1,9 @@
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import { createFileRoute } from '@tanstack/react-router'
 import { json } from '@tanstack/react-start'
+import yaml from 'yaml'
 import { isAuthenticated } from '../../server/auth-middleware'
 import {
   BEARER_TOKEN,
@@ -74,6 +78,24 @@ const FEATURED_SKILLS: Array<{ id: string; group: string }> = [
   { id: 'gillberto1/moltwallet', group: 'Productivity' },
   { id: 'veeramanikandanr48/backtest-expert', group: 'Productivity' },
 ]
+
+const LOCAL_CATEGORY_ALIASES: Record<string, string> = {
+  apple: 'Productivity',
+  'autonomous-ai-agents': 'AI & LLMs',
+  creative: 'Image & Video',
+  'data-science': 'Data & Analytics',
+  devops: 'DevOps & Cloud',
+  email: 'Communication',
+  github: 'Git & GitHub',
+  mcp: 'AI & LLMs',
+  media: 'Image & Video',
+  'note-taking': 'Productivity',
+  productivity: 'Productivity',
+  research: 'Search & Research',
+  'smart-home': 'Productivity',
+  'social-media': 'Marketing & Sales',
+  'software-development': 'Coding Agents',
+}
 
 function asRecord(value: unknown): Record<string, unknown> {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
@@ -242,6 +264,182 @@ function sortSkills(skills: Array<SkillSummary>, sort: SkillsSort) {
   })
 }
 
+function getConfiguredHermesHome(): string {
+  const envHome = process.env.HERMES_HOME?.trim()
+  return path.resolve(envHome || path.join(os.homedir(), '.hermes'))
+}
+
+function getHermesRootFromHome(hermesHome: string): string {
+  const parts = hermesHome.split(path.sep)
+  const profilesIndex = parts.lastIndexOf('profiles')
+  if (profilesIndex > 0) {
+    return parts.slice(0, profilesIndex).join(path.sep) || path.sep
+  }
+  return hermesHome
+}
+
+function uniqueExistingDirectories(candidates: Array<string>): Array<string> {
+  const seen = new Set<string>()
+  const roots: Array<string> = []
+  for (const candidate of candidates) {
+    const resolved = path.resolve(candidate)
+    if (seen.has(resolved)) continue
+    seen.add(resolved)
+    try {
+      if (fs.statSync(resolved).isDirectory()) roots.push(resolved)
+    } catch {
+      continue
+    }
+  }
+  return roots
+}
+
+function countFiles(root: string): number {
+  let count = 0
+  const stack = [root]
+  while (stack.length > 0) {
+    const current = stack.pop() as string
+    let entries: Array<fs.Dirent> = []
+    try {
+      entries = fs.readdirSync(current, { withFileTypes: true })
+    } catch {
+      continue
+    }
+    for (const entry of entries) {
+      const fullPath = path.join(current, entry.name)
+      if (entry.isDirectory()) {
+        stack.push(fullPath)
+      } else {
+        count += 1
+      }
+    }
+  }
+  return count
+}
+
+function findSkillFiles(root: string): Array<string> {
+  const skillFiles: Array<string> = []
+  const stack = [root]
+  while (stack.length > 0) {
+    const current = stack.pop() as string
+    let entries: Array<fs.Dirent> = []
+    try {
+      entries = fs.readdirSync(current, { withFileTypes: true })
+    } catch {
+      continue
+    }
+    for (const entry of entries) {
+      const fullPath = path.join(current, entry.name)
+      if (entry.isDirectory()) {
+        if (entry.name === 'node_modules' || entry.name === '.git') continue
+        stack.push(fullPath)
+        continue
+      }
+      if (entry.name === 'SKILL.md') skillFiles.push(fullPath)
+    }
+  }
+  return skillFiles
+}
+
+function parseFrontmatter(content: string): Record<string, unknown> {
+  const match = content.match(/^---\s*\n([\s\S]*?)\n---\s*(?:\n|$)/)
+  if (!match) return {}
+  try {
+    return asRecord(yaml.parse(match[1] || ''))
+  } catch {
+    return {}
+  }
+}
+
+function firstMarkdownHeading(content: string): string {
+  const heading = content.match(/^#\s+(.+)$/m)?.[1]
+  return heading?.trim() || ''
+}
+
+function normalizeLocalCategory(raw: string, tags: Array<string>): string {
+  const lowered = raw.trim().toLowerCase()
+  const aliased = LOCAL_CATEGORY_ALIASES[lowered]
+  if (aliased) return aliased
+  const matchedKnown = KNOWN_CATEGORIES.find(
+    (candidate) => candidate.toLowerCase() === lowered,
+  )
+  if (matchedKnown && matchedKnown !== 'All') return matchedKnown
+
+  return guessCategory({ category: raw, tags })
+}
+
+function localSkillFromFile(
+  skillFile: string,
+  root: string,
+): SkillSummary | null {
+  let content = ''
+  try {
+    content = fs.readFileSync(skillFile, 'utf-8')
+  } catch {
+    return null
+  }
+
+  const frontmatter = parseFrontmatter(content)
+  const metadata = asRecord(frontmatter.metadata)
+  const hermesMetadata = asRecord(metadata.hermes)
+  const tags = [
+    ...readStringArray(frontmatter.tags),
+    ...readStringArray(hermesMetadata.tags),
+  ]
+  const skillDir = path.dirname(skillFile)
+  const relativeDir = path.relative(root, skillDir).replace(/\\/g, '/')
+  const sourceCategory = relativeDir.split('/').filter(Boolean)[0] || ''
+  const name =
+    readString(frontmatter.name) ||
+    firstMarkdownHeading(content) ||
+    path.basename(skillDir)
+  const id = readString(frontmatter.id) || name
+  const rawCategory =
+    readString(hermesMetadata.category) ||
+    readString(frontmatter.category) ||
+    sourceCategory
+
+  return {
+    id,
+    slug: slugify(id),
+    name,
+    description: readString(frontmatter.description),
+    author: readString(frontmatter.author) || 'Hermes',
+    triggers: readStringArray(frontmatter.triggers),
+    tags,
+    homepage: readString(frontmatter.homepage) || null,
+    category: normalizeLocalCategory(rawCategory, tags),
+    icon: readString(frontmatter.icon) || '✨',
+    content,
+    fileCount: countFiles(skillDir),
+    sourcePath: skillFile,
+    installed: true,
+    enabled: true,
+    builtin: false,
+    featuredGroup: undefined,
+    security: { level: 'safe', flags: [], score: 0 },
+  }
+}
+
+function fetchLocalSkills(): Array<SkillSummary> {
+  const hermesHome = getConfiguredHermesHome()
+  const hermesRoot = getHermesRootFromHome(hermesHome)
+  const roots = uniqueExistingDirectories([
+    path.join(hermesRoot, 'skills'),
+    path.join(hermesHome, 'skills'),
+  ])
+
+  const byId = new Map<string, SkillSummary>()
+  for (const root of roots) {
+    for (const skillFile of findSkillFiles(root)) {
+      const skill = localSkillFromFile(skillFile, root)
+      if (!skill) continue
+      byId.set(skill.id, skill)
+    }
+  }
+  return Array.from(byId.values())
+}
+
 export const Route = createFileRoute('/api/skills')({
   server: {
     handlers: {
@@ -250,16 +448,6 @@ export const Route = createFileRoute('/api/skills')({
           return json({ ok: false, error: 'Unauthorized' }, { status: 401 })
         }
         const capabilities = await ensureGatewayProbed()
-        if (!capabilities.skills) {
-          return json({
-            ...createCapabilityUnavailablePayload('skills'),
-            items: [],
-            skills: [],
-            total: 0,
-            page: 1,
-            categories: KNOWN_CATEGORIES,
-          })
-        }
 
         try {
           const url = new URL(request.url)
@@ -283,7 +471,12 @@ export const Route = createFileRoute('/api/skills')({
             Math.max(1, Number(url.searchParams.get('limit') || '30')),
           )
 
-          const sourceItems = await fetchHermesSkills()
+          let sourceItems = capabilities.skills
+            ? await fetchHermesSkills()
+            : fetchLocalSkills()
+          if (sourceItems.length === 0) {
+            sourceItems = fetchLocalSkills()
+          }
           const installedLookup = new Set(
             sourceItems
               .filter((skill) => skill.installed)
@@ -327,6 +520,9 @@ export const Route = createFileRoute('/api/skills')({
             total,
             page,
             categories: KNOWN_CATEGORIES,
+            source: capabilities.skills ? 'gateway' : 'local',
+            actionsAvailable:
+              capabilities.skills || capabilities.dashboard.available,
           })
         } catch (err) {
           return json(

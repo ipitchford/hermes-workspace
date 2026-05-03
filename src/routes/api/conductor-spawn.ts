@@ -2,9 +2,9 @@
  * Conductor mission spawn — Hermes-backed.
  *
  * Spawns a one-shot Hermes job whose prompt is the orchestrator instructions.
- * The orchestrator session, when it runs, uses the create_task / delegate
- * tools to spawn worker agents. The Conductor UI then polls /api/sessions
- * + /api/history to track workers.
+ * The orchestrator session, when it runs, uses delegate_task to spawn worker
+ * agents. The Conductor UI then polls /api/sessions + /api/history to track
+ * workers when the backend exposes session APIs.
  *
  * Replaces the previous OCPlatform JSON-RPC implementation
  * (gatewayRpc('cron.add', ...)) which only worked when the OCPlatform
@@ -18,13 +18,15 @@ import { json } from '@tanstack/react-start'
 import { isAuthenticated } from '../../server/auth-middleware'
 import { requireJsonContentType } from '../../server/rate-limit'
 import {
-  HERMES_API,
   BEARER_TOKEN,
+  HERMES_API,
   dashboardFetch,
   ensureGatewayProbed,
 } from '../../server/gateway-capabilities'
 
 let cachedSkill: string | null = null
+
+const CONDUCTOR_TOOLSETS = ['delegation', 'terminal', 'file', 'web']
 
 type ConductorSpawnBody = {
   goal?: unknown
@@ -52,7 +54,10 @@ function loadDispatchSkill(): string {
   const candidates = [
     resolve(repoRoot(), 'skills/workspace-dispatch/SKILL.md'),
     resolve(process.cwd(), 'skills/workspace-dispatch/SKILL.md'),
-    resolve(process.env.HOME ?? '~', '.hermes/skills/workspace-dispatch/SKILL.md'),
+    resolve(
+      process.env.HOME ?? '~',
+      '.hermes/skills/workspace-dispatch/SKILL.md',
+    ),
     resolve(
       process.env.HOME ?? '~',
       '.ocplatform/workspace/skills/workspace-dispatch/SKILL.md',
@@ -92,14 +97,22 @@ function buildOrchestratorPrompt(
 ): string {
   const outputBase = options.projectsDir || '/tmp'
   const outputPrefix =
-    outputBase === '/tmp' ? '/tmp/dispatch-<slug>' : `${outputBase}/dispatch-<slug>`
+    outputBase === '/tmp'
+      ? '/tmp/dispatch-<slug>'
+      : `${outputBase}/dispatch-<slug>`
 
   return [
     'You are a mission orchestrator. Execute this mission autonomously.',
     '',
     '## Dispatch Skill Instructions',
     '',
-    skill || '(workspace-dispatch skill not found locally; proceed using create_task to spawn workers)',
+    skill ||
+      '(workspace-dispatch skill not found locally; proceed using delegate_task to spawn workers)',
+    '',
+    '## Hermes Runtime Tool Mapping',
+    '',
+    'This Hermes profile exposes worker spawning through the delegate_task tool.',
+    'Do not call sessions_spawn, sessions_yield, or create_task unless those exact tools are present.',
     '',
     '## Mission',
     '',
@@ -124,7 +137,7 @@ function buildOrchestratorPrompt(
       : []),
     '',
     '## Critical Rules',
-    '- Use create_task / delegate_task to create worker agents for each task',
+    '- Use delegate_task to create worker agents for each task',
     '- Do NOT do the work yourself — spawn workers',
     '- For simple tasks (single file, quick mockup), use ONLY 1 task with 1 worker — do not over-decompose',
     '- Do NOT ask for confirmation — start immediately',
@@ -151,12 +164,14 @@ async function createHermesJob(payload: {
   schedule: string
   prompt: string
   deliver?: string
+  enabledToolsets?: Array<string>
 }): Promise<{ id?: string; name?: string; error?: string }> {
   const body = JSON.stringify({
     name: payload.name,
     schedule: payload.schedule,
     prompt: payload.prompt,
     deliver: payload.deliver ?? 'local',
+    enabled_toolsets: payload.enabledToolsets,
   })
   const capabilities = await ensureGatewayProbed()
   const res = capabilities.dashboard.available
@@ -181,6 +196,31 @@ async function createHermesJob(payload: {
     return { error: data.error || `HTTP ${res.status}` }
   }
   return { id: data.job?.id, name: data.job?.name }
+}
+
+async function triggerHermesJob(
+  jobId: string,
+): Promise<{ queued?: boolean; error?: string }> {
+  const capabilities = await ensureGatewayProbed()
+  const res = capabilities.dashboard.available
+    ? await dashboardFetch(`/api/cron/jobs/${jobId}/trigger`, {
+        method: 'POST',
+      })
+    : await fetch(`${HERMES_API}/api/jobs/${jobId}/run`, {
+        method: 'POST',
+        headers: authHeaders(),
+      })
+  const text = await res.text()
+  let data: { queued?: boolean; error?: string } = {}
+  try {
+    data = JSON.parse(text)
+  } catch {
+    return { error: text || `HTTP ${res.status}` }
+  }
+  if (!res.ok || data.error) {
+    return { error: data.error || `HTTP ${res.status}` }
+  }
+  return { queued: data.queued === true }
 }
 
 export const Route = createFileRoute('/api/conductor-spawn')({
@@ -225,19 +265,20 @@ export const Route = createFileRoute('/api/conductor-spawn')({
             schedule: nowPlusSecondsIso(5),
             prompt,
             deliver: 'local',
+            enabledToolsets: CONDUCTOR_TOOLSETS,
           })
 
           if (result.error) {
-            return json(
-              { ok: false, error: result.error },
-              { status: 502 },
-            )
+            return json({ ok: false, error: result.error }, { status: 502 })
           }
 
           // Hermes runs cron jobs in sessions keyed `cron_<jobId>_<timestamp>`.
           // We can't know the timestamp until the cron loop fires, so we return
           // a prefix and the UI polls for any session whose key starts with it.
           const jobId = result.id ?? jobName
+          const triggerResult = result.id
+            ? await triggerHermesJob(result.id)
+            : { error: 'job id missing from create response' }
           return json({
             ok: true,
             sessionKey: `cron_${jobId}_pending`,
@@ -245,13 +286,15 @@ export const Route = createFileRoute('/api/conductor-spawn')({
             jobId,
             jobName: result.name ?? jobName,
             runId: null,
+            triggered: !triggerResult.error,
+            triggerQueued: triggerResult.queued === true,
+            triggerError: triggerResult.error ?? null,
           })
         } catch (error) {
           return json(
             {
               ok: false,
-              error:
-                error instanceof Error ? error.message : String(error),
+              error: error instanceof Error ? error.message : String(error),
             },
             { status: 500 },
           )

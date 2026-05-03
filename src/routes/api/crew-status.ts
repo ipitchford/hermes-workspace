@@ -1,18 +1,24 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
-import { isAuthenticated } from '../../server/auth-middleware'
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { json } from '@tanstack/react-start'
+import { createFileRoute } from '@tanstack/react-router'
 import yaml from 'yaml'
-import { BEARER_TOKEN, HERMES_API, ensureGatewayProbed } from '../../server/gateway-capabilities'
+import { isAuthenticated } from '../../server/auth-middleware'
+import {
+  BEARER_TOKEN,
+  HERMES_API,
+  ensureGatewayProbed,
+} from '../../server/gateway-capabilities'
+import type { Dirent } from 'node:fs'
 
 type CrewDefinition = {
   id: string
   displayName: string
   role: string
   profilePath: string | null
+  profileKind: 'primary' | 'profile' | 'research_council'
 }
 
 type DbStats = {
@@ -25,6 +31,23 @@ type DbStats = {
   lastSessionAt: number | null
 }
 
+type CouncilStats = {
+  lastCouncilRunAt: number | null
+  lastCouncilQuestion: string | null
+  lastCouncilStatus: string | null
+  lastCouncilDryRun: boolean | null
+  lastCouncilRunDir: string | null
+  lastCouncilOutputPath: string | null
+}
+
+const RESEARCH_COUNCIL_ROLES: Record<string, string> = {
+  alpha: 'Source scout',
+  beta: 'Causal design',
+  gamma: 'Evidence builder',
+  delta: 'Adversarial reviewer',
+  epsilon: 'Publication editor',
+}
+
 function titleCase(value: string): string {
   return value
     .split(/[-_\s]+/)
@@ -33,7 +56,7 @@ function titleCase(value: string): string {
     .join(' ')
 }
 
-function buildCrewDefinitions(): CrewDefinition[] {
+function buildCrewDefinitions(): Array<CrewDefinition> {
   const base = join(homedir(), '.hermes')
   const profilesDir = join(base, 'profiles')
   const dynamicProfiles = existsSync(profilesDir)
@@ -44,13 +67,23 @@ function buildCrewDefinitions(): CrewDefinition[] {
     : []
 
   return [
-    { id: 'workspace', displayName: 'Workspace', role: 'Primary profile', profilePath: null },
-    ...dynamicProfiles.map((profile) => ({
-      id: profile,
-      displayName: titleCase(profile),
-      role: 'Profile',
-      profilePath: profile,
-    })),
+    {
+      id: 'workspace',
+      displayName: 'Workspace',
+      role: 'Primary profile',
+      profilePath: null,
+      profileKind: 'primary',
+    },
+    ...dynamicProfiles.map((profile): CrewDefinition => {
+      const councilRole = RESEARCH_COUNCIL_ROLES[profile]
+      return {
+        id: profile,
+        displayName: titleCase(profile),
+        role: councilRole ? `Research council - ${councilRole}` : 'Profile',
+        profilePath: profile,
+        profileKind: councilRole ? 'research_council' : 'profile',
+      }
+    }),
   ]
 }
 
@@ -61,7 +94,13 @@ function getHermesHome(profilePath: string | null): string {
 
 function readGatewayState(hermesHome: string) {
   const path = join(hermesHome, 'gateway_state.json')
-  if (!existsSync(path)) return { pid: null, gatewayState: 'unknown', platforms: {}, updatedAt: null }
+  if (!existsSync(path))
+    return {
+      pid: null,
+      gatewayState: 'unknown',
+      platforms: {},
+      updatedAt: null,
+    }
   try {
     const raw = JSON.parse(readFileSync(path, 'utf-8'))
     return {
@@ -71,7 +110,12 @@ function readGatewayState(hermesHome: string) {
       updatedAt: raw.updated_at ?? null,
     }
   } catch {
-    return { pid: null, gatewayState: 'unknown', platforms: {}, updatedAt: null }
+    return {
+      pid: null,
+      gatewayState: 'unknown',
+      platforms: {},
+      updatedAt: null,
+    }
   }
 }
 
@@ -156,11 +200,117 @@ print(json.dumps(out))
   }
 }
 
+function emptyCouncilStats(): CouncilStats {
+  return {
+    lastCouncilRunAt: null,
+    lastCouncilQuestion: null,
+    lastCouncilStatus: null,
+    lastCouncilDryRun: null,
+    lastCouncilRunDir: null,
+    lastCouncilOutputPath: null,
+  }
+}
+
+function collectManifestPaths(root: string): Array<string> {
+  if (!existsSync(root)) return []
+  const paths: Array<string> = []
+  const stack = [root]
+
+  while (stack.length > 0) {
+    const current = stack.pop() as string
+    let entries: Array<Dirent> = []
+    try {
+      entries = readdirSync(current, { withFileTypes: true })
+    } catch {
+      continue
+    }
+
+    for (const entry of entries) {
+      const fullPath = join(current, entry.name)
+      if (entry.isDirectory()) {
+        stack.push(fullPath)
+        continue
+      }
+      if (entry.name === 'manifest.json') paths.push(fullPath)
+    }
+  }
+
+  return paths
+}
+
+function readCouncilStats(profile: string): CouncilStats {
+  if (!RESEARCH_COUNCIL_ROLES[profile]) return emptyCouncilStats()
+
+  const runsRoot = join(homedir(), '.hermes', 'research-council', 'runs')
+  let latest: CouncilStats = emptyCouncilStats()
+
+  for (const manifestPath of collectManifestPaths(runsRoot)) {
+    try {
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8')) as {
+        question?: unknown
+        dry_run?: unknown
+        run_dir?: unknown
+        results?: Array<{
+          profile?: unknown
+          status?: unknown
+          dry_run?: unknown
+          returncode?: unknown
+          output_path?: unknown
+        }>
+      }
+      const results = Array.isArray(manifest.results) ? manifest.results : []
+      const result = results.find((entry) => entry.profile === profile)
+      if (!result) continue
+
+      const runAt = statSync(manifestPath).mtimeMs / 1000
+      if (
+        latest.lastCouncilRunAt !== null &&
+        runAt <= latest.lastCouncilRunAt
+      ) {
+        continue
+      }
+
+      const status =
+        typeof result.status === 'string'
+          ? result.status
+          : typeof result.returncode === 'number'
+            ? result.returncode === 0
+              ? 'ok'
+              : 'failed'
+            : null
+
+      latest = {
+        lastCouncilRunAt: runAt,
+        lastCouncilQuestion:
+          typeof manifest.question === 'string' ? manifest.question : null,
+        lastCouncilStatus: status,
+        lastCouncilDryRun:
+          typeof result.dry_run === 'boolean'
+            ? result.dry_run
+            : typeof manifest.dry_run === 'boolean'
+              ? manifest.dry_run
+              : null,
+        lastCouncilRunDir:
+          typeof manifest.run_dir === 'string' ? manifest.run_dir : null,
+        lastCouncilOutputPath:
+          typeof result.output_path === 'string' ? result.output_path : null,
+      }
+    } catch {
+      continue
+    }
+  }
+
+  return latest
+}
+
 function readConfig(hermesHome: string): { model: string; provider: string } {
   const configPath = join(hermesHome, 'config.yaml')
   if (!existsSync(configPath)) return { model: 'unknown', provider: 'unknown' }
   try {
-    const raw = yaml.parse(readFileSync(configPath, 'utf-8')) as Record<string, unknown>
+    const raw = yaml.parse(readFileSync(configPath, 'utf-8')) as Record<
+      string,
+      unknown
+    >
     const modelVal = raw.model
     const providerVal = raw.provider
 
@@ -204,7 +354,7 @@ async function fetchAssignedTaskCounts(): Promise<Record<string, number>> {
     })
     if (!res.ok) return {}
 
-    const data = await res.json() as {
+    const data = (await res.json()) as {
       tasks?: Array<{ assignee?: string | null; column?: string | null }>
     }
 
@@ -236,10 +386,12 @@ export const Route = createFileRoute('/api/crew-status')({
           const profileFound = existsSync(hermesHome)
 
           if (!profileFound) {
+            const councilStats = readCouncilStats(member.id)
             return {
               id: member.id,
               displayName: member.displayName,
               role: member.role,
+              profileKind: member.profileKind,
               profileFound: false,
               gatewayState: 'unknown',
               processAlive: false,
@@ -255,17 +407,20 @@ export const Route = createFileRoute('/api/crew-status')({
               estimatedCostUsd: null,
               cronJobCount: 0,
               assignedTaskCount: taskCounts[member.id] ?? 0,
+              ...councilStats,
             }
           }
 
           const gatewayInfo = readGatewayState(hermesHome)
           const dbStats = readDbStats(hermesHome)
           const config = readConfig(hermesHome)
+          const councilStats = readCouncilStats(member.id)
 
           return {
             id: member.id,
             displayName: member.displayName,
             role: member.role,
+            profileKind: member.profileKind,
             profileFound: true,
             gatewayState: gatewayInfo.gatewayState,
             processAlive: checkProcessAlive(gatewayInfo.pid),
@@ -281,6 +436,7 @@ export const Route = createFileRoute('/api/crew-status')({
             estimatedCostUsd: dbStats.estimatedCostUsd,
             cronJobCount: readCronJobCount(hermesHome),
             assignedTaskCount: taskCounts[member.id] ?? 0,
+            ...councilStats,
           }
         })
 

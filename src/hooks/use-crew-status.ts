@@ -10,10 +10,11 @@ export type CrewMember = {
   id: string
   displayName: string
   role: string
+  profileKind: 'primary' | 'profile' | 'research_council'
   profileFound: boolean
   gatewayState: 'running' | 'stopped' | 'unknown' | string
   processAlive: boolean
-  platforms: Record<string, CrewPlatformInfo>
+  platforms: Partial<Record<string, CrewPlatformInfo>>
   model: string
   provider: string
   lastSessionTitle: string | null
@@ -25,10 +26,16 @@ export type CrewMember = {
   estimatedCostUsd: number | null
   cronJobCount: number
   assignedTaskCount: number
+  lastCouncilRunAt: number | null
+  lastCouncilQuestion: string | null
+  lastCouncilStatus: string | null
+  lastCouncilDryRun: boolean | null
+  lastCouncilRunDir: string | null
+  lastCouncilOutputPath: string | null
 }
 
 export type CrewStatus = {
-  crew: CrewMember[]
+  crew: Array<CrewMember>
   fetchedAt: number
 }
 
@@ -68,7 +75,8 @@ export function useCrewStatus() {
       }
     }
     document.addEventListener('visibilitychange', handleVisibility)
-    return () => document.removeEventListener('visibilitychange', handleVisibility)
+    return () =>
+      document.removeEventListener('visibilitychange', handleVisibility)
   }, [queryClient])
 
   return {

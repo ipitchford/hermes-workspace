@@ -6,6 +6,11 @@ interface GatewayStatus {
   hermesUrl: string
 }
 
+const LOCALLY_BROWSABLE_FEATURES = new Set<EnhancedFeature>([
+  'memory',
+  'skills',
+])
+
 export function useFeatureAvailable(feature: EnhancedFeature): boolean {
   const { data } = useQuery({
     queryKey: ['gateway-status'],
@@ -18,5 +23,9 @@ export function useFeatureAvailable(feature: EnhancedFeature): boolean {
     refetchInterval: 60_000,
   })
 
-  return data?.capabilities?.[feature] === true
+  if (LOCALLY_BROWSABLE_FEATURES.has(feature)) {
+    return true
+  }
+
+  return data?.capabilities[feature] === true
 }

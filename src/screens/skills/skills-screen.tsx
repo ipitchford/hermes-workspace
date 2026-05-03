@@ -55,6 +55,8 @@ type SkillsApiResponse = {
   total: number
   page: number
   categories: Array<string>
+  source?: 'gateway' | 'local'
+  actionsAvailable?: boolean
 }
 
 type SkillSearchTier = 0 | 1 | 2 | 3
@@ -235,27 +237,23 @@ export function SkillsScreen() {
     },
     [searchInput, skillsQuery.data?.skills],
   )
+  const actionsAvailable = skillsQuery.data?.actionsAvailable === true
 
   const marketplaceSkills = useMemo<Array<SkillSummary>>(
     function resolveMarketplaceSkills() {
       return (hubQuery.data?.results || []).map(function mapHubSkill(skill) {
         // Gateway returns: name, description, source, identifier, trust_level, repo, path, tags, extra, installed
         const skillId = skill.id || skill.name
+        const extra = skill.extra ?? {}
         const author =
           skill.author ||
           (skill.repo ? skill.repo.split('/')[0] : null) ||
-          (skill.extra as Record<string, unknown>)?.author ||
+          extra.author ||
           skill.source ||
           'Community'
-        const homepage =
-          skill.homepage ||
-          skill.repo ||
-          (skill.extra as Record<string, unknown>)?.homepage ||
-          null
-        const category =
-          skill.category ||
-          (skill.extra as Record<string, unknown>)?.category ||
-          'Productivity'
+        const homepage = skill.homepage || skill.repo || extra.homepage || null
+        const resolvedCategory =
+          skill.category || extra.category || 'Productivity'
 
         return {
           id: skillId,
@@ -266,12 +264,11 @@ export function SkillsScreen() {
           triggers: skill.tags,
           tags: skill.tags,
           homepage: typeof homepage === 'string' ? homepage : null,
-          category: String(category),
+          category: String(resolvedCategory),
           icon:
             skill.source === 'github'
               ? '🐙'
-              : skill.source === 'official' ||
-                  skill.trust_level === 'builtin'
+              : skill.source === 'official' || skill.trust_level === 'builtin'
                 ? '✅'
                 : skill.source === 'skills-sh'
                   ? '📦'
@@ -288,7 +285,10 @@ export function SkillsScreen() {
             .filter(Boolean)
             .join('\n\n'),
           fileCount: 0,
-          sourcePath: skill.identifier || (typeof homepage === 'string' ? homepage : '') || skill.source,
+          sourcePath:
+            skill.identifier ||
+            (typeof homepage === 'string' ? homepage : '') ||
+            skill.source,
           installed: skill.installed,
           enabled: skill.installed,
           featuredGroup: undefined,
@@ -298,7 +298,7 @@ export function SkillsScreen() {
                 ? 'safe'
                 : skill.trust_level === 'trusted'
                   ? 'safe'
-                  : 'review',
+                  : 'medium',
             flags: [],
             score: 0,
           },
@@ -415,9 +415,7 @@ export function SkillsScreen() {
 
   function handleTabChange(nextTab: string) {
     const parsedTab: SkillsTab =
-      nextTab === 'installed' ||
-      nextTab === 'marketplace' ||
-      nextTab === 'featured'
+      nextTab === 'installed' || nextTab === 'marketplace'
         ? nextTab
         : 'installed'
 
@@ -480,7 +478,6 @@ export function SkillsScreen() {
                 >
                   Marketplace
                 </TabsTab>
-
               </TabsList>
 
               {tab !== 'marketplace' ? (
@@ -492,38 +489,32 @@ export function SkillsScreen() {
                     className="h-9 w-full min-w-0 rounded-lg border border-primary-200 bg-primary-100/60 px-3 text-sm text-ink outline-none transition-colors focus:border-primary sm:min-w-[220px]"
                   />
 
-                  {tab === 'installed' ? (
-                    <select
-                      value={category}
-                      onChange={(event) =>
-                        handleCategoryChange(event.target.value)
-                      }
-                      className="h-9 rounded-lg border border-primary-200 bg-primary-100/60 px-3 text-sm text-ink outline-none"
-                    >
-                      {categories.map((item) => (
-                        <option key={item} value={item}>
-                          {item}
-                        </option>
-                      ))}
-                    </select>
-                  ) : null}
+                  <select
+                    value={category}
+                    onChange={(event) =>
+                      handleCategoryChange(event.target.value)
+                    }
+                    className="h-9 rounded-lg border border-primary-200 bg-primary-100/60 px-3 text-sm text-ink outline-none"
+                  >
+                    {categories.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
 
-                  {tab === 'installed' ? (
-                    <select
-                      value={sort}
-                      onChange={(event) =>
-                        handleSortChange(
-                          event.target.value === 'category'
-                            ? 'category'
-                            : 'name',
-                        )
-                      }
-                      className="h-9 rounded-lg border border-primary-200 bg-primary-100/60 px-3 text-sm text-ink outline-none"
-                    >
-                      <option value="name">Name A-Z</option>
-                      <option value="category">Category</option>
-                    </select>
-                  ) : null}
+                  <select
+                    value={sort}
+                    onChange={(event) =>
+                      handleSortChange(
+                        event.target.value === 'category' ? 'category' : 'name',
+                      )
+                    }
+                    className="h-9 rounded-lg border border-primary-200 bg-primary-100/60 px-3 text-sm text-ink outline-none"
+                  >
+                    <option value="name">Name A-Z</option>
+                    <option value="category">Category</option>
+                  </select>
                 </div>
               ) : null}
             </div>
@@ -534,11 +525,19 @@ export function SkillsScreen() {
               </p>
             ) : null}
 
+            {!actionsAvailable && !skillsQuery.isPending ? (
+              <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+                Local read-only skill browser active. This backend does not
+                expose skill install, uninstall, or toggle APIs.
+              </p>
+            ) : null}
+
             <TabsPanel value="installed" className="pt-2">
               <SkillsGrid
                 skills={skills}
                 loading={skillsQuery.isPending}
                 actionSkillId={actionSkillId}
+                actionsAvailable={actionsAvailable}
                 tab="installed"
                 onOpenDetails={setSelectedSkill}
                 onInstall={(skillId) => runSkillAction('install', { skillId })}
@@ -583,6 +582,7 @@ export function SkillsScreen() {
                 skills={marketplaceSkills}
                 loading={hubQuery.isPending}
                 actionSkillId={actionSkillId}
+                actionsAvailable={actionsAvailable}
                 tab="marketplace"
                 emptyState={{
                   title: searchInput.trim()
@@ -774,6 +774,7 @@ type SkillsGridProps = {
   skills: Array<SkillSummary>
   loading: boolean
   actionSkillId: string | null
+  actionsAvailable: boolean
   tab: 'installed' | 'marketplace'
   emptyState?: {
     title: string
@@ -820,7 +821,6 @@ function SecurityBadge({
 }) {
   if (!security) return null
   const config = SECURITY_BADGE[security.level]
-  if (!config) return null
 
   const [expanded, setExpanded] = useState(false)
 
@@ -859,7 +859,6 @@ function SecurityBadge({
 function SecurityScanCard({ security }: { security: SecurityRisk }) {
   const [showDetails, setShowDetails] = useState(false)
   const config = SECURITY_BADGE[security.level]
-  if (!config) return null
 
   const summaryText =
     security.flags.length === 0
@@ -940,6 +939,7 @@ function SkillsGrid({
   skills,
   loading,
   actionSkillId,
+  actionsAvailable,
   tab,
   emptyState,
   onOpenDetails,
@@ -1031,31 +1031,39 @@ function SkillsGrid({
 
                 {tab === 'installed' ? (
                   <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1.5 text-xs text-primary-500">
-                      <Switch
-                        checked={skill.enabled}
-                        disabled={isActing}
-                        onCheckedChange={(checked) =>
-                          onToggle(skill.id, checked)
-                        }
-                        aria-label={`Toggle ${skill.name}`}
-                      />
-                      {skill.enabled ? 'Enabled' : 'Disabled'}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={isActing}
-                      onClick={() => onUninstall(skill.id)}
-                    >
-                      Uninstall
-                    </Button>
+                    {actionsAvailable ? (
+                      <>
+                        <div className="flex items-center gap-1.5 text-xs text-primary-500">
+                          <Switch
+                            checked={skill.enabled}
+                            disabled={isActing}
+                            onCheckedChange={(checked) =>
+                              onToggle(skill.id, checked)
+                            }
+                            aria-label={`Toggle ${skill.name}`}
+                          />
+                          {skill.enabled ? 'Enabled' : 'Disabled'}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={isActing}
+                          onClick={() => onUninstall(skill.id)}
+                        >
+                          Uninstall
+                        </Button>
+                      </>
+                    ) : (
+                      <span className="rounded-md border border-primary-200 bg-primary-100/60 px-2 py-1 text-xs text-primary-500">
+                        Read-only
+                      </span>
+                    )}
                   </div>
                 ) : skill.installed ? (
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={isActing}
+                    disabled={isActing || !actionsAvailable}
                     onClick={() => onUninstall(skill.id)}
                   >
                     Uninstall
@@ -1063,7 +1071,7 @@ function SkillsGrid({
                 ) : (
                   <Button
                     size="sm"
-                    disabled={isActing}
+                    disabled={isActing || !actionsAvailable}
                     onClick={() => onInstall(skill.id)}
                   >
                     Install
