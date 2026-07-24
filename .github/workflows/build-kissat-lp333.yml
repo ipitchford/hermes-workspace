@@ -1,0 +1,35 @@
+name: Build Kissat binary for LP333 research
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/build-kissat-lp333.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build pinned Kissat source snapshot
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/arminbiere/kissat.git kissat-src
+          (cd kissat-src && git rev-parse HEAD > ../kissat.commit && ./configure && make -C build -j2)
+          kissat-src/build/kissat --version | tee kissat.version
+          cp kissat-src/build/kissat ./kissat-linux-x86_64
+          sha256sum kissat-linux-x86_64 kissat.commit kissat.version > SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kissat-linux-x86_64
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            kissat-linux-x86_64
+            kissat.commit
+            kissat.version
+            SHA256SUMS
