@@ -1,0 +1,204 @@
+name: LP333 exact 3-adic proof run
+
+on:
+  push:
+    branches:
+      - codex/lp333-proof-run-20260724
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'lp333-proof/**'
+      - '.github/workflows/lp333-proof-run.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lp333-proof-run-20260724
+  cancel-in-progress: false
+
+jobs:
+  solve:
+    name: ${{ matrix.stage }} / ${{ matrix.solver }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - stage: first
+            solver: kissat
+            solver_ref: rel-4.0.4
+            seconds: 18000
+          - stage: first
+            solver: cadical
+            solver_ref: rel-3.0.1
+            seconds: 18000
+          - stage: mod9
+            solver: kissat
+            solver_ref: rel-4.0.4
+            seconds: 18000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Reconstruct and verify proof-search payload
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cat lp333-proof/payload.[0-9][0-9].b64 > lp333-proof/payload.tar.gz.b64
+          base64 --decode lp333-proof/payload.tar.gz.b64 > lp333-proof/payload.tar.gz
+          echo '717c596f5af1278aae86c43d522a0fb9f501ed4fca10b4e33a6a0e1ad749fc1b  lp333-proof/payload.tar.gz' | sha256sum -c -
+          tar -xzf lp333-proof/payload.tar.gz -C lp333-proof
+          chmod +x lp333-proof/generate_lifting_cnf.py lp333-proof/verify_lifting_model.py
+
+      - name: Record environment
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p results
+          uname -a | tee results/uname.txt
+          lscpu | tee results/lscpu.txt
+          python3 --version | tee results/python-version.txt
+          git rev-parse HEAD | tee results/repository-commit.txt
+
+      - name: Build ${{ matrix.solver }}
+        shell: bash
+        run: |
+          set -euxo pipefail
+          if [[ '${{ matrix.solver }}' == 'kissat' ]]; then
+            git clone --depth 1 --branch '${{ matrix.solver_ref }}' https://github.com/arminbiere/kissat.git solver-src
+            (cd solver-src && ./configure && make -j2)
+            solver="$(find "$PWD/solver-src" -type f -name kissat -perm -111 | head -n1)"
+          else
+            git clone --depth 1 --branch '${{ matrix.solver_ref }}' https://github.com/arminbiere/cadical.git solver-src
+            (cd solver-src && ./configure && make -j2)
+            solver="$(find "$PWD/solver-src" -type f -name cadical -perm -111 | head -n1)"
+          fi
+          test -x "$solver"
+          echo "SOLVER=$solver" >> "$GITHUB_ENV"
+          (cd solver-src && git rev-parse HEAD) | tee results/solver-commit.txt
+          "$solver" --version | tee results/solver-version.txt
+          "$solver" --help > results/solver-help.txt 2>&1 || true
+
+      - name: Build independent DRAT checker
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/marijnheule/drat-trim.git drat-trim
+          (cd drat-trim && git checkout 2e5e29c && make -j2)
+          test -x drat-trim/drat-trim
+          echo "DRAT=$PWD/drat-trim/drat-trim" >> "$GITHUB_ENV"
+          (cd drat-trim && git rev-parse HEAD) | tee results/drat-trim-commit.txt
+
+      - name: Generate and verify a positive SAT control
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 lp333-proof/generate_lifting_cnf.py \
+            --witness lp333-proof/intermediate111_H6_witness.y \
+            --basis lp333-proof/final_phase_gf3_basis_sparse.txt \
+            --stage first --shift-limit 1 \
+            --cnf control.cnf --meta control.meta.json \
+            | tee results/control-generation.json
+          set +e
+          timeout --signal=TERM --kill-after=30 300 "$SOLVER" control.cnf > control.log 2>&1
+          rc=$?
+          set -e
+          cp control.log results/control-solver.log
+          echo "$rc" > results/control-exit-code.txt
+          grep -E '^s SATISFIABLE' control.log
+          grep -E '^v ' control.log > control.model
+          python3 lp333-proof/verify_lifting_model.py \
+            --meta control.meta.json --model control.model \
+            --witness lp333-proof/intermediate111_H6_witness.y \
+            --output results/control-verification.json \
+            | tee results/control-verification-summary.json
+
+      - name: Generate exact ${{ matrix.stage }} instance
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 lp333-proof/generate_lifting_cnf.py \
+            --witness lp333-proof/intermediate111_H6_witness.y \
+            --basis lp333-proof/final_phase_gf3_basis_sparse.txt \
+            --stage '${{ matrix.stage }}' \
+            --cnf instance.cnf --meta results/instance.meta.json \
+            | tee results/instance-generation.json
+          sha256sum instance.cnf lp333-proof/intermediate111_H6_witness.y \
+            lp333-proof/final_phase_gf3_basis_sparse.txt \
+            lp333-proof/generate_lifting_cnf.py \
+            lp333-proof/verify_lifting_model.py \
+            | tee results/sha256.txt
+          ls -lh instance.cnf | tee results/instance-size.txt
+
+      - name: Run exact SAT decision
+        id: solve
+        shell: bash
+        run: |
+          set -uo pipefail
+          start=$(date +%s)
+          set +e
+          timeout --signal=TERM --kill-after=60 '${{ matrix.seconds }}' \
+            "$SOLVER" instance.cnf proof.drat > results/solver.log 2>&1
+          rc=$?
+          set -e
+          stop=$(date +%s)
+          echo "$rc" | tee results/solver-exit-code.txt
+          echo "$((stop-start))" | tee results/solver-wall-seconds.txt
+
+          status=UNKNOWN
+          if grep -q '^s SATISFIABLE' results/solver.log; then
+            status=SAT
+          elif grep -q '^s UNSATISFIABLE' results/solver.log; then
+            status=UNSAT
+          elif [[ "$rc" == 124 || "$rc" == 137 || "$rc" == 143 ]]; then
+            status=TIMEOUT
+          fi
+          echo "$status" | tee results/status.txt
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+          if [[ "$status" == SAT ]]; then
+            grep -E '^v ' results/solver.log > results/model.txt
+            python3 lp333-proof/verify_lifting_model.py \
+              --meta results/instance.meta.json --model results/model.txt \
+              --witness lp333-proof/intermediate111_H6_witness.y \
+              --output results/model-verification.json \
+              | tee results/model-verification-summary.json
+          elif [[ "$status" == UNSAT ]]; then
+            test -s proof.drat
+            "$DRAT" instance.cnf proof.drat -t 2400 \
+              | tee results/drat-trim.log
+            grep -q 'VERIFIED' results/drat-trim.log
+            zstd -T0 -12 proof.drat -o results/proof.drat.zst
+            rm -f proof.drat
+          fi
+
+          tail -n 200 results/solver.log > results/solver-tail.txt
+          du -sh results/* | sort -h | tee results/result-sizes.txt
+
+      - name: Write result summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '# LP333 exact lifting search'
+            echo
+            echo '- Stage: `${{ matrix.stage }}`'
+            echo '- Solver: `${{ matrix.solver }}`'
+            echo '- Solver ref: `${{ matrix.solver_ref }}`'
+            echo '- Status: `'
+            cat results/status.txt 2>/dev/null || echo 'JOB_FAILED_BEFORE_DECISION'
+            echo '`'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload proof-search artefacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lp333-${{ matrix.stage }}-${{ matrix.solver }}-${{ github.run_attempt }}
+          path: results/
+          retention-days: 14
+          if-no-files-found: error
