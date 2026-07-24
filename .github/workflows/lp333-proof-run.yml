@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - codex/lp333-proof-run-20260724
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'lp333-proof/**'
+      - '.github/workflows/lp333-proof-run.yml'
   workflow_dispatch:
 
 permissions:
