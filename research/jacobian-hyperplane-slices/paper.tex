@@ -1,0 +1,554 @@
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage[margin=1in]{geometry}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+
+\newcommand{\A}{\mathbb A}
+\newcommand{\C}{\mathbb C}
+\newcommand{\Gm}{\mathbb G_m}
+\newcommand{\Pj}{\mathbb P}
+\newcommand{\Lef}{\mathbb L}
+\newcommand{\Res}{\operatorname{Res}}
+\newcommand{\Sym}{\operatorname{Sym}}
+\newcommand{\Pic}{\operatorname{Pic}}
+\newcommand{\Cl}{\operatorname{Cl}}
+\newcommand{\Spec}{\operatorname{Spec}}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+\title{Hyperplane Slices of the Marked-Cubic Map\\
+\large A classification and geometric explanation of the three-dimensional Keller counterexample}
+\author{Prepared by GPT-5.6 Pro (OpenAI)\\
+with research direction from Ian Pitchford}
+\date{27 July 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Let $W$ be a two-dimensional complex vector space, put
+$V_d=\Sym^d(W^*)$, and consider multiplication of binary forms
+\[
+m:V_1\times V_2\longrightarrow V_3,\qquad (L,Q)\longmapsto LQ.
+\]
+For $0\ne\ell\in V_3^*$ define
+\[
+H_\ell=\{C\in V_3:\ell(C)=1\},\qquad
+X_\ell=\{(L,Q):\Res(L,Q)=1,\ \ell(LQ)=1\}.
+\]
+We prove that $f_\ell:X_\ell\to H_\ell$ is \`etale for every $\ell$ and
+classify exactly when $X_\ell$ is affine three-space. If
+$\Delta\subset\Pj(V_3)$ is the twisted cubic of cubes of linear forms, then
+\[
+X_\ell\cong\A^3
+\quad\Longleftrightarrow\quad
+\Pj(\ker\ell)\text{ is tangent but not osculating to }\Delta.
+\]
+The tangent case is an iterated Zariski-locally-trivial $\A^1$-bundle. For
+contact types $1+1+1$, $2+1$, and $3$, respectively, we compute
+\[
+[X_\ell]=\Lef^3-\Lef,\qquad \Lef^3,\qquad \Lef^3-\Lef^2.
+\]
+The osculating slice is $\Gm\times\A^2$. We also identify the fibers with the
+simple roots of the target cubic, describe the discriminant as the
+nonproperness locus, and reconcile the geometry with the announced explicit
+polynomial map. An exact symbolic verifier accompanies the manuscript.
+\end{abstract}
+
+\section{Status and scope}
+
+A concrete polynomial self-map of $\C^3$ with nonzero constant Jacobian and a
+three-point fiber was announced by Levent Alp\"oge on 19 July 2026 and
+credited to Fable. In the following days, Andy Jiang publicized the
+symmetric-product marked-root construction; Aaron Lou gave a reproducible
+factorization--resultant derivation; and Will Sawin, David Speyer, Daniel
+Litt, Jake Levinson, Terence Tao, Bartosz Naskr\k{e}cki, and others supplied
+complementary geometric and computational explanations.
+
+This paper does not claim priority for the counterexample or those ingredients.
+It assembles them into a complete classification of the affine hyperplanes
+$\ell(C)=1$. We work over $\C$. Characteristics two and three require separate
+treatment and are not claimed here.
+
+\section{The normalized factorization family}
+
+Let $V_i=\Sym^i(W^*)$. Multiplication
+\[
+m:V_1\times V_2\to V_3,\qquad (L,Q)\mapsto LQ
+\]
+has the relative scaling symmetry
+\[
+(L,Q)\mapsto(\lambda L,\lambda^{-1}Q).
+\]
+The resultant $\rho(L,Q)=\Res(L,Q)$ is bihomogeneous of degree $(2,1)$:
+\[
+\rho(\alpha L,\beta Q)=\alpha^2\beta\rho(L,Q).
+\]
+Thus relative scaling changes $\rho$ by one power of $\lambda$, and $\rho=1$
+fixes that scaling uniquely wherever $L$ and $Q$ are coprime.
+
+For $0\ne\ell\in V_3^*$ put
+\[
+H_\ell=\{C:\ell(C)=1\}\cong\A^3,
+\qquad
+X_\ell=\{(L,Q):\rho(L,Q)=1,\ \ell(LQ)=1\},
+\]
+and let $f_\ell(L,Q)=LQ$.
+
+\section{Universal \`etaleness}
+
+\begin{proposition}\label{prop:universal-etale}
+The map
+\[
+\Phi:V_1\times V_2\longrightarrow V_3\times\A^1,
+\qquad \Phi(L,Q)=(LQ,\rho(L,Q))
+\]
+is \`etale on $\rho\ne0$.
+\end{proposition}
+
+\begin{proof}
+At a coprime pair, a tangent vector in the kernel of multiplication satisfies
+\[
+\dot LQ+L\dot Q=0.
+\]
+Coprimality gives $L\mid\dot L$, hence $\dot L=tL$ and $\dot Q=-tQ$.
+Therefore
+\[
+\ker(dm)_{(L,Q)}=\C(L,-Q).
+\]
+Bihomogeneity gives
+\[
+d\rho_{(L,Q)}(L,-Q)=(2-1)\rho(L,Q)=\rho(L,Q)\ne0.
+\]
+The resultant detects the unique tangent direction forgotten by
+multiplication. Since both spaces have dimension five, $d\Phi$ is an
+isomorphism.
+\end{proof}
+
+\begin{corollary}\label{cor:slice-etale}
+For every nonzero $\ell$, the map $f_\ell:X_\ell\to H_\ell$ is \`etale.
+\end{corollary}
+
+\begin{proof}
+It is the base change of Proposition~\ref{prop:universal-etale} along
+$H_\ell\times\{1\}\hookrightarrow V_3\times\A^1$.
+\end{proof}
+
+\section{Projective and marked-root models}
+
+Let
+\[
+\overline X=\Pj(V_1)\times\Pj(V_2)\cong\Pj^1\times\Pj^2.
+\]
+Let $\mathcal R$ be the resultant divisor and
+$\mathcal S_\ell=\{([L],[Q]):\ell(LQ)=0\}$. Their divisor classes are
+\[
+[\mathcal R]=(2,1),\qquad[\mathcal S_\ell]=(1,1).
+\]
+
+\begin{lemma}\label{lem:projective-complement}
+There is a canonical isomorphism
+\[
+X_\ell\cong\overline X\setminus(\mathcal R\cup\mathcal S_\ell).
+\]
+\end{lemma}
+
+\begin{proof}
+For a projective pair outside the boundary, choose representatives and put
+$r=\rho(L,Q)$ and $h=\ell(LQ)$. The unique normalization is
+\[
+L'=\frac{h}{r}L,\qquad Q'=\frac{r}{h^2}Q.
+\]
+Both formulas are regular where $rh\ne0$, and they give
+$\rho(L',Q')=\ell(L'Q')=1$.
+\end{proof}
+
+A linear form determines its zero $p\in\Pj^1$.
+
+\begin{lemma}\label{lem:marked-root}
+There is a natural isomorphism
+\[
+X_\ell\cong
+\{(C,p):C\in H_\ell,\ C(p)=0,\ p\text{ is a simple root of }C\}.
+\]
+Under this identification, $f_\ell$ forgets the marked root.
+\end{lemma}
+
+\begin{proof}
+A normalized pair gives $(LQ,Z(L))$. Conversely, a simple root gives a
+linear--quadratic factorization, unique up to relative scaling. Since relative
+scaling changes the resultant with weight one, there is a unique
+resultant-one representative.
+\end{proof}
+
+Hence the fiber sizes are $3$, $1$, and $0$ for cubics with three distinct
+roots, a double plus a simple root, and a triple root, respectively.
+
+\section{The three hyperplane orbits}
+
+Let
+\[
+\Delta=\{[M^3]:[M]\in\Pj(V_1)\}\subset\Pj(V_3)
+\]
+be the twisted cubic. The projective hyperplane
+$H_\ell^\infty=\Pj(\ker\ell)$ cuts a degree-three divisor on $\Delta\cong\Pj^1$.
+Up to $PGL_2$, the multiplicity types are
+\[
+1+1+1,\qquad 2+1,\qquad 3.
+\]
+They are, respectively, transverse, tangent nonosculating, and osculating.
+
+If $\ell'=\lambda\ell$, then
+\[
+(L,Q)\mapsto(\lambda L,\lambda^{-2}Q)
+\]
+identifies $X_\ell$ and $X_{\ell'}$. The $SL_2$-equivariance of multiplication
+and invariance of the resultant show that the isomorphism class depends only
+on the contact type.
+
+\section{The tangent slice as an iterated affine-line bundle}
+
+Assume $H_\ell^\infty\cap\Delta=2\infty+0$. Choose an affine coordinate on
+$\Pj^1\setminus\{\infty\}$ so the finite hyperplane condition is
+$p+q+r=0$. In $\Sym^2(\Pj^1)\cong\Pj^2$, define
+\[
+R_p=\{\{q,r\}:p\in\{q,r\}\},
+\qquad
+S_p=\{\{q,r\}:p+q+r=0\}.
+\]
+The lines meet at
+\[
+s(p)=\{p,-2p\}
+\]
+for finite $p$, and $s(\infty)=\{\infty,\infty\}$. The image $C_s$ of
+$s:\Pj^1\to\Pj^2$ is a smooth conic.
+
+Define
+\[
+X_\ell^*=\{(p,\Lambda):s(p)\in\Lambda,\ \Lambda\ne R_p,S_p\}.
+\]
+
+\begin{lemma}\label{lem:first-a1}
+The map
+\[
+\pi:X_\ell\to X_\ell^*,\qquad (p,D)\mapsto(p,\overline{s(p)D})
+\]
+is a Zariski-locally-trivial $\A^1$-bundle.
+\end{lemma}
+
+\begin{proof}
+For fixed $(p,\Lambda)$, the point $D$ ranges over
+$\Lambda\setminus\{s(p)\}\cong\A^1$. Globally this is the complement of a
+section in a $\Pj^1$-bundle.
+\end{proof}
+
+A line through $s(p)$ has residual intersection $s(q)$ with $C_s$. The line
+$S_p$ joins $s(p)$ to $s(\infty)$, while $R_p$ meets $C_s$ again at
+$s(-p/2)$. Therefore
+\[
+X_\ell^*\cong
+\{(p,q)\in\Pj^1\times\A^1:p\ne-2q\}.
+\]
+Projection to $q$ is the complement of a section in a trivial $\Pj^1$-bundle,
+so it is an $\A^1$-bundle over $\A^1$.
+
+\begin{lemma}\label{lem:a1-trivial}
+Every Zariski-locally-trivial $\A^1$-bundle over $\A^n$ is trivial.
+\end{lemma}
+
+\begin{proof}
+Its linear part is a line bundle, classified by $\Pic(\A^n)=0$. Once this is
+trivial, its translational part is a $\mathbb G_a$-torsor, classified by
+$H^1(\A^n,\mathcal O)=0$.
+\end{proof}
+
+Thus $X_\ell^*\cong\A^2$, and Lemmas~\ref{lem:first-a1} and
+\ref{lem:a1-trivial} give the main geometric result.
+
+\begin{theorem}\label{thm:tangent-a3}
+If $H_\ell^\infty$ is tangent but not osculating to $\Delta$, then
+$X_\ell\cong\A^3$.
+\end{theorem}
+
+\begin{remark}[Vector-bundle form]
+Write the linear factor as $[a:b]$ and the quadratic coefficients as
+$[c:d:e]$. The two boundary lines are
+\[
+bc+ad=0,\qquad b^2c-abd+a^2e=0.
+\]
+Their moving intersection is the conic section
+\[
+\sigma([a:b])=[a^2:-ab:-2b^2].
+\]
+Projection from it is encoded by
+\[
+0\to\mathcal O(-2)
+\xrightarrow{(a^2,-ab,-2b^2)^T}\mathcal O^3
+\xrightarrow{\left(\begin{smallmatrix}b&a&0\\0&-2b&a\end{smallmatrix}\right)}
+\mathcal O(1)^2\to0.
+\]
+Thus the quotient $\Pj^1$-bundle is trivial. The boundary lines descend to a
+constant section and a degree-one graph, another direct route to the two
+successive $\A^1$-bundles.
+\end{remark}
+
+\section{The other two orbits}
+
+Let $\Lef=[\A^1]$ in $K_0(\operatorname{Var}_{\C})$. Project the marked-root
+model to $p\in\Pj^1$. Usually the equations $C(p)=0$ and $\ell(C)=1$ form an
+$\A^2$, and the multiple-root condition removes an $\A^1$. Thus the usual
+fiber has class $\Lef^2-\Lef$.
+
+Let $K_p$ be the subspace of cubics vanishing to order at least two at $p$.
+Then $K_p^\perp$ is the tangent line to the dual twisted cubic at the evaluation
+functional $[e_p]$. Therefore:
+\begin{itemize}[leftmargin=2em]
+\item in type $1+1+1$, every fiber is usual;
+\item in type $2+1$, one exceptional fiber is $\A^2$;
+\item in type $3$, one exceptional fiber is empty.
+\end{itemize}
+Stratifying $\Pj^1$ gives
+\[
+[X_\ell]=
+\begin{cases}
+(\Lef+1)(\Lef^2-\Lef)=\Lef^3-\Lef,&1+1+1,\\
+\Lef(\Lef^2-\Lef)+\Lef^2=\Lef^3,&2+1,\\
+\Lef(\Lef^2-\Lef)=\Lef^3-\Lef^2,&3.
+\end{cases}
+\]
+Compactly supported Euler characteristic sends $\Lef$ to $1$, so the first
+and third types have Euler characteristic zero and cannot be $\A^3$.
+
+For type $3$, choose the normal form in which $\ell(C)$ is the leading
+coefficient. With
+\[
+L=aT+bS,\qquad Q=cT^2+dTS+eS^2,
+\]
+the slice has $ac=1$. Thus $a\in\Gm$, $c=a^{-1}$, and the resultant equation
+solves for $e$, leaving $(a,b,d)$ free. Hence
+\[
+X_\ell\cong\Gm\times\A^2.
+\]
+
+\begin{theorem}[Classification]\label{thm:classification}
+For $0\ne\ell\in V_3^*$,
+\[
+X_\ell\cong\A^3
+\quad\Longleftrightarrow\quad
+H_\ell^\infty\text{ is tangent but not osculating to }\Delta.
+\]
+Equivalently, the successful projective hyperplanes form the tangent
+developable of the dual twisted cubic with the twisted cubic removed.
+\end{theorem}
+
+\section{Covering and nonproperness geometry}
+
+Lemma~\ref{lem:marked-root} shows that the fiber is the set of simple roots.
+Thus the generic degree is three and the image omits exactly the triple-root
+locus in $H_\ell$. Over the discriminant complement, $f_\ell$ is a finite
+\`etale three-sheeted covering. At a double-root cubic, the simple-root sheet
+remains and the two coalescing markings escape to infinity. At a triple-root
+cubic, no marking remains. Consequently the discriminant hypersurface is
+exactly the nonproperness locus.
+
+If $C(t)$ has simple root $\zeta$, its unique resultant-one factorization is
+\[
+L(t)=\frac{t-\zeta}{C'(\zeta)},
+\qquad
+Q(t)=C'(\zeta)\frac{C(t)}{t-\zeta}.
+\]
+The escape of a sheet as a root becomes multiple is therefore the divergence
+of $1/C'(\zeta)$.
+
+\section{Explicit coordinates}
+
+In the tangent normal form,
+\[
+X=\{(a,b,c,d,e):a^2e-abd+cb^2=1,\ ad+bc=1\}.
+\]
+A polynomial isomorphism $\A^3_{a,y,z}\to X$ is
+\[
+\begin{aligned}
+b&=1+ay,\\
+c&=1-\frac32ay+a^2z,\\
+d&=\frac12y-az+\frac32ay^2-a^2yz,\\
+e&=-2z+4y^2-4ayz+3ay^3-2a^2y^2z.
+\end{aligned}
+\]
+One polynomial inverse is
+\[
+y=2bd-ae,
+\qquad
+z=2d^2+ce+6bd^2+3bce-\frac92e.
+\]
+After defining $y$, the second formula may equivalently be written
+$z=2yd+cy^2-e/2$.
+
+Dropping the fixed coefficient $ad+bc=1$ from the product gives
+\[
+G(a,y,z)=(ac,ae+bd,be),
+\]
+with
+\[
+\begin{aligned}
+G_1&=a-\frac32a^2y+a^3z,\\
+G_2&=\frac12y-3az+6ay^2-6a^2yz+\frac92a^2y^3-3a^3y^2z,\\
+G_3&=-2z+4y^2-6ayz+7ay^3-6a^2y^2z+3a^2y^4-2a^3y^3z.
+\end{aligned}
+\]
+The exact verifier gives $\det DG=-1$.
+
+Define
+\[
+A(x,y,z)=\left(x,y,-\frac z2\right),
+\qquad
+B(u_1,u_2,u_3)=(u_3,2u_2,2u_1).
+\]
+Then the announced map
+\[
+\begin{aligned}
+F_1&=(1+xy)^3z+y^2(1+xy)(4+3xy),\\
+F_2&=y+3x(1+xy)^2z+3xy^2(4+3xy),\\
+F_3&=2x-3x^2y-x^3z
+\end{aligned}
+\]
+satisfies $F=B\circ G\circ A$. Hence $\det DF=-2$. Moreover,
+\[
+F(0,0,-1/4)=F(1,-3/2,13/2)=F(-1,3/2,13/2)=(-1/4,0,0).
+\]
+
+\section{The master determinant}
+
+For
+\[
+L=xT+\beta S,\qquad Q=\gamma T^2+\delta TS+\varepsilon S^2,
+\]
+put
+\[
+\begin{aligned}
+c_3&=x\gamma,&c_2&=x\delta+\beta\gamma,
+&c_1&=x\varepsilon+\beta\delta,\\
+c_0&=\beta\varepsilon,
+&\rho&=x^2\varepsilon-x\beta\delta+\beta^2\gamma.
+\end{aligned}
+\]
+Then
+\[
+\det\frac{\partial(c_3,c_2,c_1,c_0,\rho)}
+{\partial(x,\beta,\gamma,\delta,\varepsilon)}=-\rho^2.
+\]
+This is the coordinate shadow of Proposition~\ref{prop:universal-etale}. On the
+slice $c_2=\rho=1$, eliminating $(\delta,\varepsilon)$ divides by a triangular
+constraint block of determinant $x^3$; the affine chart contributes the
+compensating factor $x^3$.
+
+\section{Why degree three is exceptional}
+
+For the degree-$n$ marked-root compactification
+$\Pj^1\times\Pj^{n-1}\to\Pj^n$, the analogous ramification and hyperplane
+pullback classes are
+\[
+(n-1,1),\qquad(1,1).
+\]
+If both boundary divisors are irreducible, divisor localization gives
+\[
+\Cl(U_n)\cong
+\mathbb Z^2/\langle(n-1,1),(1,1)\rangle
+\cong\mathbb Z/(n-2)\mathbb Z.
+\]
+Thus the natural complement cannot be $\A^n$ for $n\ge4$. The boundary
+classes are unimodular only for $n=3$.
+
+\section{Conclusion}
+
+Three mechanisms are now separated. Multiplication plus the resultant gives
+universal local invertibility; forgetting a marked simple root gives universal
+generic multiplicity three; and tangent nonosculating contact gives the unique
+affine-space source. Tangency places the two boundary lines on an auxiliary
+conic section, and projection from that section produces two successive affine
+line bundles. The other hyperplane orbits retain computable obstructions.
+
+\section*{Reproducibility}
+
+The accompanying \texttt{verify\_all.py} checks, over exact rational arithmetic,
+the forward and inverse coordinate maps, both Jacobian determinants, the
+three-point collision, the five-dimensional determinant, the conic syzygy, and
+the target cubic discriminant.
+
+\section*{Contribution and AI disclosure}
+
+Ian Pitchford supplied the research direction and the sequence of questions
+that isolated the group action, compactification, hyperplane-orbit problem, and
+invariant classification target. GPT-5.6 Pro synthesized the proofs, wrote the
+manuscript and verifier, and performed the exact symbolic audit. This is a
+post-announcement synthesis and classification, not a historical account of
+the discovery.
+
+\begin{thebibliography}{99}
+
+\bibitem{Alpoge2026}
+L. Alp\"oge,
+\emph{Announcement of an explicit counterexample to the Jacobian conjecture},
+19 July 2026.
+\url{https://x.com/__alpoge__/status/2079028340955197566}
+
+\bibitem{Jiang2026}
+A. Jiang,
+\emph{Projective symmetric-product description of the counterexample},
+20 July 2026.
+\url{https://x.com/davikrehalt/status/2079175065695035442}
+
+\bibitem{Levinson2026}
+J. Levinson,
+\emph{Claude's counterexample to the Jacobian conjecture}, 22 July 2026.
+\url{https://levjake.wordpress.com/wp-content/uploads/2026/07/jacobian-claude-counterexample-writeup.pdf}
+
+\bibitem{Litt2026}
+D. Litt,
+\emph{Affine-line-bundle explanation of the marked-cubic source},
+21 July 2026.
+\url{https://x.com/littmath/status/2079353531430289734}
+
+\bibitem{Lou2026}
+A. Lou,
+\emph{Deriving an explicit polynomial counterexample to the Jacobian conjecture},
+20 July 2026.
+\url{https://aaronlou.com/jacobian_counterexample_derivation.pdf}
+
+\bibitem{Naskrecki2026}
+B. Naskr\k{e}cki,
+\emph{Exact audit and structural analysis: A three-dimensional Keller counterexample},
+21 July 2026.
+\url{https://nasqret.github.io/jacobian-counterexample/book/index.html}
+
+\bibitem{SpeyerBlog2026}
+D. Speyer,
+\emph{The new counterexample to the Jacobian conjecture},
+Secret Blogging Seminar, 20--21 July 2026.
+\url{https://sbseminar.wordpress.com/2026/07/20/the-new-counterexample-to-the-jacobian-conjecture/}
+
+\bibitem{Tao2026}
+T. Tao,
+\emph{A digestion of the Jacobian conjecture counterexample},
+21 July 2026.
+\url{https://terrytao.wordpress.com/2026/07/21/a-digestion-of-the-jacobian-conjecture-counterexample/}
+
+\bibitem{Speyer2024}
+D. E. Speyer,
+\emph{Richardson varieties, projected Richardson varieties and positroid varieties},
+2024, Lemma 3.5.
+\url{https://arxiv.org/abs/2303.04831}
+
+\end{thebibliography}
+
+\end{document}
