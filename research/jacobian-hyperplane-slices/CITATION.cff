@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "Please cite this research package and the primary 2026 sources credited in the manuscript."
+title: "Hyperplane Slices of the Marked-Cubic Map: A Classification and Geometric Explanation of the Three-Dimensional Keller Counterexample"
+type: software
+version: 0.1.0
+date-released: 2026-07-27
+authors:
+  - family-names: Pitchford
+    given-names: Ian
+    contribution: "Research direction and geometric problem formulation"
+  - name: "GPT-5.6 Pro (OpenAI)"
+    contribution: "Proof synthesis, manuscript, and exact verifier"
+repository-code: "https://github.com/ipitchford/hermes-workspace/tree/research/jacobian-hyperplane-slices/research/jacobian-hyperplane-slices"
+license: MIT
+keywords:
+  - Jacobian conjecture
+  - Keller map
+  - binary cubic
+  - resultant
+  - etale morphism
+  - twisted cubic
+  - affine line bundle
+abstract: >-
+  A complete classification of normalized linear-times-quadratic factorization
+  slices associated with affine hyperplanes in the space of binary cubics.
+  The source is affine three-space exactly for tangent nonosculating
+  hyperplanes. The package includes a coordinate-free geometric proof and an
+  exact symbolic verifier for the announced polynomial counterexample.
