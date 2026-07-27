@@ -1,6 +1,12 @@
 name: Verify Jacobian hyperplane slices
 
 on:
+  push:
+    branches:
+      - research/jacobian-hyperplane-slices
+    paths:
+      - 'research/jacobian-hyperplane-slices/**'
+      - '.github/workflows/verify-jacobian-slices.yml'
   pull_request:
     paths:
       - 'research/jacobian-hyperplane-slices/**'
@@ -27,3 +33,27 @@ jobs:
         run: python -m pip install -r research/jacobian-hyperplane-slices/requirements.txt
       - name: Run exact rational-arithmetic checks
         run: python research/jacobian-hyperplane-slices/verify_all.py
+
+  compile-paper:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Install LaTeX
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            texlive-latex-base texlive-latex-recommended \
+            texlive-fonts-recommended texlive-fonts-extra
+      - name: Compile manuscript twice
+        working-directory: research/jacobian-hyperplane-slices
+        run: |
+          pdflatex -interaction=nonstopmode -halt-on-error paper.tex
+          pdflatex -interaction=nonstopmode -halt-on-error paper.tex
+      - name: Upload compiled PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacobian-hyperplane-slices-paper
+          path: research/jacobian-hyperplane-slices/paper.pdf
+          if-no-files-found: error
