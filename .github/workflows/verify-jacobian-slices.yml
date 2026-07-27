@@ -1,0 +1,29 @@
+name: Verify Jacobian hyperplane slices
+
+on:
+  pull_request:
+    paths:
+      - 'research/jacobian-hyperplane-slices/**'
+      - '.github/workflows/verify-jacobian-slices.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-symbolic-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: research/jacobian-hyperplane-slices/requirements.txt
+      - name: Install exact verifier dependency
+        run: python -m pip install -r research/jacobian-hyperplane-slices/requirements.txt
+      - name: Run exact rational-arithmetic checks
+        run: python research/jacobian-hyperplane-slices/verify_all.py
